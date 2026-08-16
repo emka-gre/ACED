@@ -1,0 +1,26 @@
+{
+  "stage": "features",
+  "generated_by": "scripts/generate_reference.py",
+  "source": "research pipeline in the thesis archive, imported unmodified",
+  "environment": {
+    "python": "3.13.3",
+    "platform": "macOS-14.6.1-x86_64-i386-64bit-Mach-O",
+    "numpy": "2.3.4",
+    "pandas": "2.3.3",
+    "sklearn": "1.7.2"
+  },
+  "outputs": [
+    "fixtures/reference/features_reference.csv",
+    "fixtures/reference/segments_reference.csv"
+  ],
+  "landmarks": "reference_62_B.csv",
+  "frames": 619,
+  "windows": 29,
+  "window_shape": [
+    29,
+    60,
+    8
+  ],
+  "window_length": 60,
+  "stride": 20
+}

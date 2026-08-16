@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtualenvs — the thesis repo committed one; this one never will
+.venv/
+venv/
+env/
+bachelor_project/
+
+# Datasets and intermediate artifacts. Fixtures under fixtures/ are the
+# deliberate exception and are force-added.
+*.csv
+!fixtures/**/*.csv
+
+# Model checkpoints outside models/
+*.keras
+*.pkl
+*.h5
+!models/**/*.keras
+!models/**/*.joblib
+
+# Media: uploads, renders, and the thesis reference video all live outside git
+*.mov
+*.MOV
+*.mp4
+*.avi
+*.mkv
+uploads/
+storage/
+artifacts/
+
+# Thesis archive, kept outside the repo but guard against a stray copy
+bachelor-project-main.zip
+bachelor-project-main/
+
+# Node / frontend
+node_modules/
+web/dist/
+web/.vite/
+*.local
+
+# Tooling and OS
+.DS_Store
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/

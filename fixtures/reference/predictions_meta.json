@@ -1,0 +1,23 @@
+{
+  "stage": "predictions",
+  "generated_by": "scripts/generate_reference.py",
+  "source": "research pipeline in the thesis archive, imported unmodified",
+  "environment": {
+    "python": "3.13.3",
+    "platform": "macOS-14.6.1-x86_64-i386-64bit-Mach-O",
+    "numpy": "2.3.4",
+    "pandas": "2.3.3",
+    "sklearn": "1.7.2"
+  },
+  "outputs": [
+    "fixtures/reference/predictions_svm_reference.csv"
+  ],
+  "models": {
+    "svm": {
+      "windows": 29,
+      "sound": 0,
+      "scaling": "internal to the saved Pipeline; raw features passed in",
+      "confidence": "decision-function margin only; probability=False"
+    }
+  }
+}
