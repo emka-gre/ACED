@@ -42,6 +42,12 @@ MEDIAPIPE_INDEX: dict[Joint, int] = {
 #: The default frame rate assumed when a container reports none. Matches the research code.
 DEFAULT_FPS = 30.0
 
+#: Mean landmark visibility below which an analysis is reported as degraded. MediaPipe's
+#: visibility is a per-landmark confidence in [0, 1]; a clean climb sits well above this, and
+#: sustained values under it mean the climber is occluded, backlit, or too far from the camera
+#: for the joint angles to be trustworthy.
+LOW_VISIBILITY_THRESHOLD = 0.5
+
 
 @dataclass(frozen=True, slots=True)
 class Landmark:
@@ -128,3 +134,11 @@ class QualitySignals:
         if self.frames_read == 0:
             return 0.0
         return 1.0 - (self.frames_detected / self.frames_read)
+
+    def is_low_visibility(self, threshold: float = LOW_VISIBILITY_THRESHOLD) -> bool:
+        """Whether detected landmarks were too faint to trust.
+
+        A run with no detections at all is not "low visibility" — there is nothing to have
+        been visible. That case is reported as no climber detected instead.
+        """
+        return self.frames_detected > 0 and self.mean_visibility < threshold
