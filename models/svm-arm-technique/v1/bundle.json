@@ -1,0 +1,37 @@
+{
+  "id": "svm-arm-technique",
+  "version": "1.0.0",
+  "model_kind": "flat",
+  "model_file": "model.joblib",
+  "features": [
+    "left_elbow_angle",
+    "right_elbow_angle",
+    "right_wrist_shoulder_dist",
+    "left_head_elbow_dist",
+    "right_head_wrist_dist",
+    "right_hip_elbow_dist",
+    "left_wrist_shoulder_dist",
+    "left_elbow_height_rel_shoulder"
+  ],
+  "window_length": 60,
+  "stride": 20,
+  "landmarks": [
+    "nose",
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip"
+  ],
+  "threshold": 0.5,
+  "scaling": "internal",
+  "confidence": "none",
+  "sound_class": 1,
+  "trained_on": null,
+  "metrics": {},
+  "scaler_provenance": "internal to the saved Pipeline; no separate scaler ships",
+  "notes": "Classifies arm technique only, from 2D pose. Trained on a small set of climbers in one gym, labelled by one person. One climber per video."
+}

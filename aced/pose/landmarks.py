@@ -8,10 +8,10 @@ extractor, so a change of pose backend does not ripple outward.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class Joint(str, Enum):
+class Joint(StrEnum):
     """The nine landmarks the trained models consume."""
 
     NOSE = "nose"

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import numpy as np
@@ -20,7 +20,7 @@ from aced.features.windowing import Window
 from aced.inference.bundle import Confidence, ModelBundle, ModelKind, Scaling
 
 
-class PredictedClass(str, Enum):
+class PredictedClass(StrEnum):
     SOUND = "sound"
     FAULT = "fault"
 
@@ -45,12 +45,16 @@ class WindowResult:
         return range(self.frame_start, self.frame_start + self.real_length)
 
 
-def adapt_sequence(windows: npt.NDArray[np.float64], length: int, n_features: int) -> npt.NDArray[np.float32]:
+def adapt_sequence(
+    windows: npt.NDArray[np.float64], length: int, n_features: int
+) -> npt.NDArray[np.float32]:
     """Time and feature axes preserved: `(batch, length, features)`."""
     return np.asarray(windows, dtype=np.float32).reshape((-1, length, n_features))
 
 
-def adapt_flat(windows: npt.NDArray[np.float64], length: int, n_features: int) -> npt.NDArray[np.float64]:
+def adapt_flat(
+    windows: npt.NDArray[np.float64], length: int, n_features: int
+) -> npt.NDArray[np.float64]:
     """Flattened, time-major: `(batch, length · features)`."""
     return np.asarray(windows, dtype=np.float64).reshape((-1, length * n_features))
 
@@ -127,7 +131,8 @@ class InferencePipeline:
 
         labels = np.asarray(model.predict(model_input)).reshape(-1)
         classes = [
-            PredictedClass.SOUND if int(label) == sound else PredictedClass.FAULT for label in labels
+            PredictedClass.SOUND if int(label) == sound else PredictedClass.FAULT
+            for label in labels
         ]
         return classes, [None] * len(classes)
 

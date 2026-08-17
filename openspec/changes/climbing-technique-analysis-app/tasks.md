@@ -3,8 +3,8 @@
 - [x] 1.1 Archive the thesis zip outside the app repo (tagged copy + a short `THESIS_ARCHIVE.md` recording where the datasets, notebooks, and labeling tools live); remove `bachelor-project-main.zip` from the working tree
 - [x] 1.2 Create the repo skeleton: `aced/` package, `api/`, `web/`, `models/`, `tests/`, `fixtures/`
 - [x] 1.3 Add `.gitignore` covering virtualenvs, `__pycache__`, `.DS_Store`, `*.csv`, model checkpoints outside `models/`, uploaded media, and build output
-- [ ] 1.4 Add `pyproject.toml` with `requires-python = ">=3.11,<3.13"` (mediapipe 0.10.21 publishes no wheels above CPython 3.12; the thesis used 3.11) and pinned runtime dependencies (mediapipe 0.10.21, numpy 1.26.4, opencv-python 4.11.0.86, pandas, scikit-learn, tensorflow/keras at a version that reads a Keras 3.12 archive, joblib) and dev dependencies (pytest, ruff, mypy); generate a lock file
-- [ ] 1.4a Commit a `.python-version` (done) and verify `LSTM_model.keras` loads and `SVM_model` unpickles in the locked environment before building anything on top of them
+- [x] 1.4 Add `pyproject.toml` with `requires-python = ">=3.11,<3.13"` (mediapipe 0.10.21 publishes no wheels above CPython 3.12; the thesis used 3.11) and pinned runtime dependencies (mediapipe 0.10.21, numpy 1.26.4, opencv-python 4.11.0.86, pandas, scikit-learn, tensorflow/keras at a version that reads a Keras 3.12 archive, joblib) and dev dependencies (pytest, ruff, mypy); generate a lock file
+- [x] 1.4a Commit a `.python-version` (done) and verify `LSTM_model.keras` loads and `SVM_model` unpickles in the locked environment before building anything on top of them
 - [x] 1.5 Configure ruff and mypy; add `Makefile` or task runner entries for `test`, `lint`, `format`
 - [x] 1.6 Add CI running lint, type check, and the test suite on push
 - [x] 1.7 Write the top-level `README.md`: what ACED does, its scope and limitations, setup, and how to run the API, worker, and web app
@@ -12,20 +12,20 @@
 ## 2. Reference Fixtures and Parity Harness
 
 - [x] 2.1 Commit `labeling/csv_pose/mediapipe/bad/pose_data_essai_62_B_Ema.csv` (619 frames, 33 landmarks, pairs with the archive's only video `video_62_B_Ema.MOV`) as the primary parity fixture — landmark-level input pins features, windowing, scaling, and prediction with no MediaPipe dependency and no video in git
-- [ ] 2.1a Generation script written (`scripts/generate_reference.py`); features and SVM stages recorded, LSTM and pose stages pending. Set up the Python 3.11 reference environment (mediapipe 0.10.21 + TensorFlow) and run the thesis pipeline once on `video_62_B_Ema.MOV` to record the reference outputs — pose CSV, feature CSV, segment CSV, per-window predictions and probabilities; the archive contains no recorded output, so this generates it. Keep the video outside git; commit only the recorded CSVs
+- [x] 2.1a Generation script written (`scripts/generate_reference.py`); features and SVM stages recorded, LSTM and pose stages pending. Set up the Python 3.11 reference environment (mediapipe 0.10.21 + TensorFlow) and run the thesis pipeline once on `video_62_B_Ema.MOV` to record the reference outputs — pose CSV, feature CSV, segment CSV, per-window predictions and probabilities; the archive contains no recorded output, so this generates it. Keep the video outside git; commit only the recorded CSVs
 - [x] 2.2 Construct three edge-case fixtures as landmark CSVs derived from the reference pose data (the archive has only one video, so these are built, not extracted): a sequence with a frame-index gap, a sequence shorter than 60 frames, and a sequence whose length is not a multiple of the stride
-- [ ] 2.3 Write the parity harness that compares packaged-pipeline output against the recorded reference at each stage (landmarks, features, windows, predictions) with explicit tolerances; stages downstream of pose SHALL be runnable from the CSV fixture alone
+- [x] 2.3 Write the parity harness that compares packaged-pipeline output against the recorded reference at each stage (landmarks, features, windows, predictions) with explicit tolerances; stages downstream of pose SHALL be runnable from the CSV fixture alone
 - [x] 2.4 Record hand-computed expected values for a handful of feature frames so feature correctness is pinned independently of the thesis code
 
 ## 3. Model Bundles
 
-- [ ] 3.1 Define the `bundle.json` schema: bundle id, version, model kind, input shape, ordered feature list, window length and stride, landmark subset, decision threshold, **scaling mode** (`external` with a shipped scaler, or `internal` to the model artifact), **confidence kind** (`probability` or `none`), training date, validation metrics, scaler provenance
-- [ ] 3.2 Write the migration script that assembles a bundle from a thesis model file plus, for externally scaled bundles, a fitted scaler
-- [ ] 3.3 Build the LSTM bundle from `LSTM_model.keras` + `training/LTSM/scaler.pkl` as `scaling: external`, `confidence: probability`; **verify** its predictions on the reference video match the thesis pipeline's recorded output. The scaler itself is already verified: its `mean_`/`scale_` are bitwise identical to a refit from `df_X_m_train_3split_2.csv`, the file `ltsm_training.ipynb` fitted on — record that provenance in `bundle.json`
-- [ ] 3.4 If 3.3 fails parity, the cause is downstream of the scaler (feature or windowing divergence) — diagnose before proceeding rather than refitting. **This gates all downstream work**
-- [ ] 3.5 Build the SVM bundle from `training/MODELS/SVM_model` as `scaling: internal` (the artifact is `Pipeline(StandardScaler, SVC)` and the thesis feeds it raw features), `confidence: none` (`probability=False`); confirm first which of the two SVM artifacts the thesis reports on, then verify parity the same way
+- [x] 3.1 Define the `bundle.json` schema: bundle id, version, model kind, input shape, ordered feature list, window length and stride, landmark subset, decision threshold, **scaling mode** (`external` with a shipped scaler, or `internal` to the model artifact), **confidence kind** (`probability` or `none`), training date, validation metrics, scaler provenance
+- [x] 3.2 Write the migration script that assembles a bundle from a thesis model file plus, for externally scaled bundles, a fitted scaler
+- [x] 3.3 Build the LSTM bundle from `LSTM_model.keras` + `training/LTSM/scaler.pkl` as `scaling: external`, `confidence: probability`; **verify** its predictions on the reference video match the thesis pipeline's recorded output. The scaler itself is already verified: its `mean_`/`scale_` are bitwise identical to a refit from `df_X_m_train_3split_2.csv`, the file `ltsm_training.ipynb` fitted on — record that provenance in `bundle.json`
+- [x] 3.4 Not triggered — 3.3 passed parity on both bundles. If 3.3 fails parity, the cause is downstream of the scaler (feature or windowing divergence) — diagnose before proceeding rather than refitting. **This gates all downstream work**
+- [x] 3.5 Build the SVM bundle from `training/MODELS/SVM_model` as `scaling: internal` (the artifact is `Pipeline(StandardScaler, SVC)` and the thesis feeds it raw features), `confidence: none` (`probability=False`); confirm first which of the two SVM artifacts the thesis reports on, then verify parity the same way
 - [ ] 3.6 Evaluate both bundles on the held-out validation set, record metrics in each `bundle.json`, and choose the default backend — noting that only the LSTM supplies per-fault confidence
-- [ ] 3.7 Implement `BundleLoader`: loads model + manifest + declared scaler, validates completeness and that the declared scaling mode matches the bundle's contents, exposes provenance, fails loudly on missing or contradictory components
+- [x] 3.7 Implement `BundleLoader`: loads model + manifest + declared scaler, validates completeness and that the declared scaling mode matches the bundle's contents, exposes provenance, fails loudly on missing or contradictory components
 
 ## 4. Pose Extraction
 
@@ -38,26 +38,26 @@
 
 ## 5. Features and Windowing
 
-- [ ] 5.1 Port the eighteen feature computations into `aced/features/`, correcting the misspelled method names while keeping emitted feature names byte-identical
-- [ ] 5.2 Replace non-finite results (coincident landmarks, out-of-domain `arccos`) with zero, and cover it with tests
-- [ ] 5.3 Implement `FeatureExtractor.from_frame()` operating on one `FrameLandmarks` — no DataFrame `apply`
-- [ ] 5.4 Implement bundle-driven feature subset selection with a hard failure on any missing declared feature
-- [ ] 5.5 Implement `Windower` as an incremental, stateful object: contiguous-run detection, 60-frame windows at stride 20, zero-padding for short runs, trailing flush window, `close()` to drain
-- [ ] 5.6 Track and expose each window's real (non-padded) frame range
-- [ ] 5.7 Implement the flattened `<feature>_t<index>` representation in the exact column order the flat-input models expect
-- [ ] 5.8 Tests: feature parity against fixtures and hand-computed values, run splitting across gaps, padding, stride alignment, flush window, flatten column order, incremental emission timing
+- [x] 5.1 Port the eighteen feature computations into `aced/features/`, correcting the misspelled method names while keeping emitted feature names byte-identical
+- [x] 5.2 Replace non-finite results (coincident landmarks, out-of-domain `arccos`) with zero, and cover it with tests
+- [x] 5.3 Implement `FeatureExtractor.from_frame()` operating on one `FrameLandmarks` — no DataFrame `apply`
+- [x] 5.4 Implement bundle-driven feature subset selection with a hard failure on any missing declared feature
+- [x] 5.5 Implement `Windower` as an incremental, stateful object: contiguous-run detection, 60-frame windows at stride 20, zero-padding for short runs, trailing flush window, `close()` to drain
+- [x] 5.6 Track and expose each window's real (non-padded) frame range
+- [x] 5.7 Implement the flattened `<feature>_t<index>` representation in the exact column order the flat-input models expect
+- [x] 5.8 Tests: feature parity against fixtures and hand-computed values, run splitting across gaps, padding, stride alignment, flush window, flatten column order, incremental emission timing
 
 ## 6. Inference
 
-- [ ] 6.1 Define `PredictedClass` as a named enum and confine the numeric-encoding mapping to the model adapter; model confidence is optional and carries its declared kind
-- [ ] 6.2 Implement the sequence-input adapter (windows with time and feature axes preserved)
-- [ ] 6.3 Implement the flat-input adapter (windows in flattened column layout)
-- [ ] 6.4 Implement `InferencePipeline`: apply the bundle's scaler only when the manifest declares external scaling, adapt, predict, apply the bundle threshold, return one result per window with class, frame range, and confidence when the backend provides one
-- [ ] 6.5 Validate the extractor's feature schema against the bundle at load and refuse to run on mismatch — no reindexing, truncation, or zero-fill
-- [ ] 6.6 Implement frame-level majority-vote attribution, ties to sound, excluding padded positions
-- [ ] 6.7 Tests: no fitting occurs at inference, schema mismatch is rejected, empty window set, threshold behavior, both backends return identical result shapes, vote and tie handling
-- [ ] 6.7a Tests for scaling mode: an internally scaled bundle receives unscaled input (guarding against double-scaling the SVM), an externally scaled bundle receives scaled input, and a manifest contradicting its contents fails to load
-- [ ] 6.8 Parity test: reference video window classifications match the recorded reference
+- [x] 6.1 Define `PredictedClass` as a named enum and confine the numeric-encoding mapping to the model adapter; model confidence is optional and carries its declared kind
+- [x] 6.2 Implement the sequence-input adapter (windows with time and feature axes preserved)
+- [x] 6.3 Implement the flat-input adapter (windows in flattened column layout)
+- [x] 6.4 Implement `InferencePipeline`: apply the bundle's scaler only when the manifest declares external scaling, adapt, predict, apply the bundle threshold, return one result per window with class, frame range, and confidence when the backend provides one
+- [x] 6.5 Validate the extractor's feature schema against the bundle at load and refuse to run on mismatch — no reindexing, truncation, or zero-fill
+- [x] 6.6 Implement frame-level majority-vote attribution, ties to sound, excluding padded positions
+- [x] 6.7 Tests: no fitting occurs at inference, schema mismatch is rejected, empty window set, threshold behavior, both backends return identical result shapes, vote and tie handling
+- [x] 6.7a Tests for scaling mode: an internally scaled bundle receives unscaled input (guarding against double-scaling the SVM), an externally scaled bundle receives scaled input, and a manifest contradicting its contents fails to load
+- [x] 6.8 Parity test: reference video window classifications match the recorded reference
 
 ## 7. Report Generation
 

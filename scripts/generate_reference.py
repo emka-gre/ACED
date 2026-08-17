@@ -35,7 +35,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_DIR = ROOT / "fixtures" / "reference"
 DEFAULT_LANDMARKS = ROOT / "fixtures" / "landmarks" / "reference_62_B.csv"
-DEFAULT_ARCHIVE = Path.home() / "Desktop" / "aced-thesis-archive" / "extracted" / "bachelor-project-main"
+DEFAULT_ARCHIVE = (
+    Path.home() / "Desktop" / "aced-thesis-archive" / "extracted" / "bachelor-project-main"
+)
 
 WINDOW = 60
 STRIDE = 20
@@ -88,7 +90,9 @@ def stage_pose(archive: Path, video: Path) -> None:
     print(f"pose: {video.name}")
     frames = PoseExtraction(video_path=str(video)).extract_poses()
     if frames.empty:
-        raise SystemExit("pose extraction produced nothing — check the video path and codec support")
+        raise SystemExit(
+            "pose extraction produced nothing — check the video path and codec support"
+        )
 
     out = REFERENCE_DIR / "pose_reference.csv"
     frames.to_csv(out, index=False)
@@ -124,15 +128,19 @@ def stage_features(archive: Path, landmarks: Path) -> None:
     per_frame.to_csv(features_out, index=False)
     segments.to_csv(segments_out, index=False)
 
-    print(f"  {len(per_frame)} frames x {per_frame.shape[1]} cols -> {features_out.relative_to(ROOT)}")
-    print(f"  {len(segments)} windows x {segments.shape[1]} cols -> {segments_out.relative_to(ROOT)}")
+    print(
+        f"  {len(per_frame)} frames x {per_frame.shape[1]} cols -> {features_out.relative_to(ROOT)}"
+    )
+    print(
+        f"  {len(segments)} windows x {segments.shape[1]} cols -> {segments_out.relative_to(ROOT)}"
+    )
     write_meta(
         "features",
         [features_out, segments_out],
         {
             "landmarks": landmarks.name,
-            "frames": int(len(per_frame)),
-            "windows": int(len(segments)),
+            "frames": len(per_frame),
+            "windows": len(segments),
             "window_shape": list(windows.shape),
             "window_length": WINDOW,
             "stride": STRIDE,
@@ -162,30 +170,43 @@ def stage_predict(archive: Path) -> None:
         print(f"  skip LSTM: {exc.name} not installed (needs the pinned Python 3.11 environment)")
     else:
         scaler = joblib.load(archive / "training" / "LTSM" / "scaler.pkl")
-        model = keras.models.load_model(archive / "training" / "MODELS" / "LSTM_model.keras", compile=False)
+        model = keras.models.load_model(
+            archive / "training" / "MODELS" / "LSTM_model.keras", compile=False
+        )
 
         # The research code aligns to the scaler's own column order before transforming.
         aligned = segments.reindex(columns=list(scaler.feature_names_in_))
         if aligned.isna().to_numpy().any():
-            raise SystemExit("segment columns do not cover the scaler's features — schema divergence")
+            raise SystemExit(
+                "segment columns do not cover the scaler's features — schema divergence"
+            )
 
         scaled = scaler.transform(aligned)
-        sequence = np.asarray(scaled, dtype=np.float32).reshape((-1, WINDOW, scaled.shape[1] // WINDOW))
+        sequence = np.asarray(scaled, dtype=np.float32).reshape(
+            (-1, WINDOW, scaled.shape[1] // WINDOW)
+        )
         probabilities = np.asarray(model.predict(sequence, verbose=0)).reshape(-1)
         predictions = (probabilities >= 0.5).astype(int)
 
         out = REFERENCE_DIR / "predictions_lstm_reference.csv"
         pd.DataFrame(
-            {"window": range(len(predictions)), "probability": probabilities, "prediction": predictions}
+            {
+                "window": range(len(predictions)),
+                "probability": probabilities,
+                "prediction": predictions,
+            }
         ).to_csv(out, index=False)
         outputs.append(out)
         recorded["lstm"] = {
-            "windows": int(len(predictions)),
+            "windows": len(predictions),
             "sound": int(predictions.sum()),
             "threshold": 0.5,
             "scaling": "external, from training/LTSM/scaler.pkl",
         }
-        print(f"  LSTM: {int(predictions.sum())}/{len(predictions)} windows sound -> {out.relative_to(ROOT)}")
+        print(
+            f"  LSTM: {int(predictions.sum())}/{len(predictions)} windows sound "
+            f"-> {out.relative_to(ROOT)}"
+        )
 
     # --- SVM: scales internally, no calibrated probability ----------------------------
     import joblib
@@ -204,20 +225,32 @@ def stage_predict(archive: Path) -> None:
     ).to_csv(out, index=False)
     outputs.append(out)
     recorded["svm"] = {
-        "windows": int(len(svm_predictions)),
+        "windows": len(svm_predictions),
         "sound": int(svm_predictions.sum()),
         "scaling": "internal to the saved Pipeline; raw features passed in",
         "confidence": "decision-function margin only; probability=False",
     }
-    print(f"  SVM: {int(svm_predictions.sum())}/{len(svm_predictions)} windows sound -> {out.relative_to(ROOT)}")
+    print(
+        f"  SVM: {int(svm_predictions.sum())}/{len(svm_predictions)} windows sound "
+        f"-> {out.relative_to(ROOT)}"
+    )
 
     write_meta("predictions", outputs, {"models": recorded})
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE, help="extracted thesis archive root")
-    parser.add_argument("--landmarks", type=Path, default=DEFAULT_LANDMARKS, help="landmark CSV for the features stage")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--archive", type=Path, default=DEFAULT_ARCHIVE, help="extracted thesis archive root"
+    )
+    parser.add_argument(
+        "--landmarks",
+        type=Path,
+        default=DEFAULT_LANDMARKS,
+        help="landmark CSV for the features stage",
+    )
     parser.add_argument("--video", type=Path, help="reference video, required for the pose stage")
     parser.add_argument(
         "--stage",

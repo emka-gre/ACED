@@ -14,13 +14,14 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
+import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from aced.pose.landmarks import (
     DEFAULT_FPS,
     MEDIAPIPE_INDEX,
     FrameLandmarks,
-    Joint,
     Landmark,
     QualitySignals,
 )
@@ -39,6 +40,13 @@ def _require_columns(frame: pd.DataFrame) -> None:
         raise MalformedLandmarkCsvError(f"landmark CSV is missing columns: {', '.join(missing)}")
 
 
+def _column(table: pd.DataFrame, name: str, length: int) -> npt.NDArray[np.float64]:
+    """A column as a float array, or zeros when the recording did not include it."""
+    if name in table.columns:
+        return table[name].to_numpy(dtype=float)
+    return np.zeros(length, dtype=float)
+
+
 def read_landmark_csv(path: Path | str, fps: float = DEFAULT_FPS) -> list[FrameLandmarks]:
     """Load every frame in the CSV, ordered by frame index."""
     return list(iter_landmark_csv(path, fps=fps))
@@ -54,20 +62,30 @@ def iter_landmark_csv(path: Path | str, fps: float = DEFAULT_FPS) -> Iterator[Fr
     _require_columns(table)
     table = table.sort_values("frame")
 
-    for row in table.itertuples(index=False):
-        record = row._asdict()
-        joints: dict[Joint, Landmark] = {}
-        for joint, index in MEDIAPIPE_INDEX.items():
-            joints[joint] = Landmark(
-                x=float(record[f"x_{index}"]),
-                y=float(record[f"y_{index}"]),
+    frame_numbers = table["frame"].to_numpy(dtype=int)
+    # Pull each column out once as an array. Per-row DataFrame access is the slow path, and
+    # it is exactly the `df.apply(lambda row: ...)` pattern this port set out to remove.
+    columns = {
+        f"{prefix}_{index}": _column(table, f"{prefix}_{index}", len(table))
+        for index in MEDIAPIPE_INDEX.values()
+        for prefix in ("x", "y", "z", "vis")
+    }
+
+    for position, frame_index in enumerate(frame_numbers):
+        joints = {
+            joint: Landmark(
+                x=float(columns[f"x_{index}"][position]),
+                y=float(columns[f"y_{index}"][position]),
                 # Some recorded CSVs carry only x/y; treat the rest as unknown rather than
-                # refusing to load, since features never touch them.
-                z=float(record.get(f"z_{index}", 0.0)),
-                visibility=float(record.get(f"vis_{index}", 0.0)),
+                # refusing to load, since the features never touch them.
+                z=float(columns[f"z_{index}"][position]),
+                visibility=float(columns[f"vis_{index}"][position]),
             )
-        frame_index = int(record["frame"])
-        yield FrameLandmarks(index=frame_index, timestamp=frame_index / fps, joints=joints)
+            for joint, index in MEDIAPIPE_INDEX.items()
+        }
+        yield FrameLandmarks(
+            index=int(frame_index), timestamp=int(frame_index) / fps, joints=joints
+        )
 
 
 def quality_from_frames(frames: list[FrameLandmarks]) -> QualitySignals:
@@ -81,4 +99,6 @@ def quality_from_frames(frames: list[FrameLandmarks]) -> QualitySignals:
 
     span = frames[-1].index - frames[0].index + 1
     mean_visibility = sum(frame.mean_visibility for frame in frames) / len(frames)
-    return QualitySignals(frames_read=span, frames_detected=len(frames), mean_visibility=mean_visibility)
+    return QualitySignals(
+        frames_read=span, frames_detected=len(frames), mean_visibility=mean_visibility
+    )

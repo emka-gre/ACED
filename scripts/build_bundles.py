@@ -22,7 +22,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = ROOT / "models"
-DEFAULT_ARCHIVE = Path.home() / "Desktop" / "aced-thesis-archive" / "extracted" / "bachelor-project-main"
+DEFAULT_ARCHIVE = (
+    Path.home() / "Desktop" / "aced-thesis-archive" / "extracted" / "bachelor-project-main"
+)
 
 WINDOW_LENGTH = 60
 STRIDE = 20
@@ -108,7 +110,9 @@ def build_lstm(archive: Path, force: bool) -> None:
             raise SystemExit(f"missing artifact: {path}")
 
     scaler = joblib.load(scaler_source)
-    provenance = check_scaler_provenance(scaler, archive / "ML_pipeline" / "df_X_m_train_3split_2.csv")
+    provenance = check_scaler_provenance(
+        scaler, archive / "ML_pipeline" / "df_X_m_train_3split_2.csv"
+    )
     print(f"  scaler: {provenance}")
 
     expected_width = WINDOW_LENGTH * len(SELECTED_FEATURES)
@@ -189,7 +193,9 @@ def build_svm(archive: Path, force: bool) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE)
     parser.add_argument("--force", action="store_true", help="overwrite existing bundles")
     parser.add_argument("--only", choices=["lstm", "svm"], help="build just one bundle")

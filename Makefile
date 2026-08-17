@@ -15,7 +15,11 @@ install: $(BIN)/python ## Create the venv and install the package with dev extra
 	$(BIN)/pip install -e ".[api,dev]"
 
 lock: install ## Freeze the resolved environment
-	$(BIN)/pip freeze --exclude-editable > requirements.lock
+	# `pip list --format=freeze` rather than `pip freeze`: the latter records a local
+	# wheel installed from disk as a `file://` path, which is meaningless on any other
+	# machine. This reports the version instead. `aced` itself is excluded — the lock
+	# describes the environment the package runs in, not the package.
+	$(BIN)/pip list --format=freeze --exclude aced > requirements.lock
 
 test: ## Run the full test suite
 	$(BIN)/pytest

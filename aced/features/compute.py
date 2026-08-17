@@ -68,10 +68,10 @@ def joint_angle(a: Point, vertex: Point, c: Point) -> float:
 
 
 def vertical_offset(reference: Point, target: Point) -> float:
-    """Signed vertical difference `target − reference`.
+    """Signed vertical difference `target - reference`.
 
     Image `y` grows downward, so a positive value means the target sits *below* the
-    reference. The research code's `compute_poition(dataset, a, b)` returns `y_b − y_a`; the
+    reference. The research code's `compute_poition(dataset, a, b)` returns `y_b - y_a`; the
     argument order is preserved by callers below so the sign convention the models were
     trained on is unchanged.
     """

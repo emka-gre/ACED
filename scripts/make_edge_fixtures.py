@@ -39,7 +39,7 @@ def _renumber(frame: pd.DataFrame, start: int) -> pd.DataFrame:
 
 
 def build_gap(source: pd.DataFrame) -> pd.DataFrame:
-    """Frames 0–40 and 55–120: two runs, a fourteen-frame hole between them.
+    """Frames 0-40 and 55-120: two runs, a fourteen-frame hole between them.
 
     The first run is shorter than a window and the second is longer, so one fixture covers
     padding and striding on either side of a boundary.
@@ -58,7 +58,7 @@ def build_stride_unaligned(source: pd.DataFrame) -> pd.DataFrame:
     """145 frames.
 
     last_valid_start = 145 - 60 = 85, which is not a multiple of the stride: aligned windows
-    start at 0, 20, 40, 60, 80 and end at frame 139, leaving frames 140–144 uncovered until
+    start at 0, 20, 40, 60, 80 and end at frame 139, leaving frames 140-144 uncovered until
     the flush window at start 85 is emitted.
     """
     length = 145
@@ -80,7 +80,10 @@ def main() -> int:
         path = FIXTURES / name
         frame.to_csv(path, index=False)
         runs = (frame["frame"].diff() != 1).sum()
-        print(f"{name}: {len(frame)} frames, {runs} run(s), indices {frame['frame'].iloc[0]}–{frame['frame'].iloc[-1]}")
+        print(
+            f"{name}: {len(frame)} frames, {runs} run(s), "
+            f"indices {frame['frame'].iloc[0]}-{frame['frame'].iloc[-1]}"
+        )
     return 0
 
 

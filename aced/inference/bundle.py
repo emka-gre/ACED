@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -37,19 +37,19 @@ MANIFEST_NAME = "bundle.json"
 SCALER_NAME = "scaler.joblib"
 
 
-class ModelKind(str, Enum):
+class ModelKind(StrEnum):
     """How the model wants its input shaped."""
 
     SEQUENCE = "sequence"  # (batch, length, features) — the LSTM
     FLAT = "flat"  # (batch, length · features) — the SVM
 
 
-class Scaling(str, Enum):
+class Scaling(StrEnum):
     EXTERNAL = "external"
     INTERNAL = "internal"
 
 
-class Confidence(str, Enum):
+class Confidence(StrEnum):
     PROBABILITY = "probability"
     NONE = "none"
 
@@ -85,7 +85,15 @@ class BundleManifest:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> BundleManifest:
-        required = ("id", "version", "model_kind", "model_file", "features", "window_length", "stride")
+        required = (
+            "id",
+            "version",
+            "model_kind",
+            "model_file",
+            "features",
+            "window_length",
+            "stride",
+        )
         missing = [key for key in required if key not in payload]
         if missing:
             raise BundleError(f"manifest is missing required keys: {', '.join(missing)}")
@@ -173,7 +181,45 @@ class ModelBundle:
             details.append(f"missing {', '.join(absent)}")
         if extra:
             details.append(f"unexpected {', '.join(extra)}")
-        raise BundleError(f"feature schema does not match bundle {self.manifest.id}: {'; '.join(details)}")
+        raise BundleError(
+            f"feature schema does not match bundle {self.manifest.id}: {'; '.join(details)}"
+        )
+
+
+def _validate_scaler(manifest: BundleManifest, scaler: Any) -> None:
+    """The scaler must have been fitted on exactly this bundle's flattened layout.
+
+    Checking the column *names*, not just the count, is what catches a scaler fitted on the
+    right number of features in the wrong order — which would scale every column by another
+    column's statistics and produce confident nonsense.
+    """
+    width = getattr(scaler, "n_features_in_", None)
+    if width is not None and int(width) != manifest.flat_width:
+        raise BundleError(
+            f"bundle {manifest.id}: scaler expects {width} features, "
+            f"manifest declares {manifest.flat_width}"
+        )
+
+    fitted_names = getattr(scaler, "feature_names_in_", None)
+    if fitted_names is None:
+        return
+
+    expected = tuple(
+        f"{name}_t{t}" for t in range(manifest.window_length) for name in manifest.features
+    )
+    if tuple(fitted_names) != expected:
+        mismatch = next(
+            (
+                fitted
+                for fitted, want in zip(fitted_names, expected, strict=False)
+                if fitted != want
+            ),
+            "<length differs>",
+        )
+        raise BundleError(
+            f"bundle {manifest.id}: scaler was fitted on different columns than the manifest "
+            f"declares (first mismatch at {mismatch})"
+        )
 
 
 def load_bundle(path: Path | str) -> ModelBundle:
@@ -222,10 +268,7 @@ def load_bundle(path: Path | str) -> ModelBundle:
         model = joblib.load(model_path)
 
     scaler = joblib.load(scaler_path) if scaler_present else None
-    if scaler is not None and getattr(scaler, "n_features_in_", manifest.flat_width) != manifest.flat_width:
-        raise BundleError(
-            f"bundle {manifest.id}: scaler expects {scaler.n_features_in_} features, "
-            f"manifest declares {manifest.flat_width}"
-        )
+    if scaler is not None:
+        _validate_scaler(manifest, scaler)
 
     return ModelBundle(manifest=manifest, model=model, scaler=scaler, path=root)

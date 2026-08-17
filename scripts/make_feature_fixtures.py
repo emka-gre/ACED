@@ -13,7 +13,7 @@ the thesis pipeline was right. These fixtures pin the feature definitions themse
 Nothing in this file imports from `aced` — that is the point. Feature semantics, restated
 from the research code:
 
-    angle(a, b, c)  angle at vertex b between ba and bc, in degrees, 0–180
+    angle(a, b, c)  angle at vertex b between ba and bc, in degrees, 0-180
     offset(a, b)    y_b - y_a, signed; image y grows downward, so positive means b is lower
     distance(a, b)  euclidean distance in the 2D (x, y) plane
 
@@ -161,7 +161,7 @@ SYNTHETIC = [
 REFERENCE_FRAMES = [1, 300]
 
 
-def pose_from_row(row: "pd.Series[Any]") -> dict[str, Point]:
+def pose_from_row(row: pd.Series[Any]) -> dict[str, Point]:
     return {
         name: (float(row[f"x_{index}"]), float(row[f"y_{index}"]))
         for name, index in LANDMARK_INDEX.items()
@@ -213,7 +213,10 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n")
     print(f"wrote {OUT.relative_to(ROOT)}")
-    print(f"  {len(payload['synthetic'])} synthetic cases, {len(payload['reference_frames'])} reference frames")
+    print(
+        f"  {len(payload['synthetic'])} synthetic cases, "
+        f"{len(payload['reference_frames'])} reference frames"
+    )
     return 0
 
 

@@ -17,7 +17,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-DEFAULT_ARCHIVE = Path.home() / "Desktop" / "aced-thesis-archive" / "extracted" / "bachelor-project-main"
+DEFAULT_ARCHIVE = (
+    Path.home() / "Desktop" / "aced-thesis-archive" / "extracted" / "bachelor-project-main"
+)
 
 # What the artifacts must look like. Established by inspecting the archive; see
 # THESIS_ARCHIVE.md. A mismatch here means the archive is not the one we verified against.
@@ -43,20 +45,27 @@ def check_scaler(path: Path) -> bool:
     passed = True
 
     if getattr(scaler, "n_features_in_", None) != EXPECTED_FEATURE_COUNT:
-        _fail(f"scaler expects {getattr(scaler, 'n_features_in_', None)} features, want {EXPECTED_FEATURE_COUNT}")
+        _fail(
+            f"scaler expects {getattr(scaler, 'n_features_in_', None)} features, "
+            f"want {EXPECTED_FEATURE_COUNT}"
+        )
         passed = False
     else:
         _ok(f"scaler fitted on {EXPECTED_FEATURE_COUNT} features")
 
     names = list(getattr(scaler, "feature_names_in_", []))
-    if names[:1] != ["left_elbow_angle_t0"] or names[-1:] != ["left_elbow_height_rel_shoulder_t59"]:
+    first, last = names[:1], names[-1:]
+    if first != ["left_elbow_angle_t0"] or last != ["left_elbow_height_rel_shoulder_t59"]:
         _fail(f"scaler feature order unexpected: {names[:1]} … {names[-1:]}")
         passed = False
     else:
         _ok("scaler feature names are the expected t-major flat columns")
 
     if int(getattr(scaler, "n_samples_seen_", 0)) != EXPECTED_SCALER_SAMPLES:
-        _fail(f"scaler saw {getattr(scaler, 'n_samples_seen_', None)} samples, want {EXPECTED_SCALER_SAMPLES}")
+        _fail(
+            f"scaler saw {getattr(scaler, 'n_samples_seen_', None)} samples, "
+            f"want {EXPECTED_SCALER_SAMPLES}"
+        )
         passed = False
     else:
         _ok(f"scaler fitted on {EXPECTED_SCALER_SAMPLES} training windows")
@@ -114,7 +123,10 @@ def check_svm(path: Path) -> bool:
         _ok("SVM artifact scales internally (Pipeline with StandardScaler)")
 
     if getattr(model, "n_features_in_", None) != EXPECTED_FEATURE_COUNT:
-        _fail(f"SVM expects {getattr(model, 'n_features_in_', None)} features, want {EXPECTED_FEATURE_COUNT}")
+        _fail(
+            f"SVM expects {getattr(model, 'n_features_in_', None)} features, "
+            f"want {EXPECTED_FEATURE_COUNT}"
+        )
         passed = False
     else:
         _ok(f"SVM expects {EXPECTED_FEATURE_COUNT} flat features")
@@ -137,7 +149,10 @@ def check_lstm(path: Path) -> bool:
 
     shape = tuple(model.input_shape)
     if shape != (None, EXPECTED_WINDOW, EXPECTED_SELECTED_FEATURES):
-        _fail(f"LSTM input shape {shape}, want (None, {EXPECTED_WINDOW}, {EXPECTED_SELECTED_FEATURES})")
+        _fail(
+            f"LSTM input shape {shape}, want "
+            f"(None, {EXPECTED_WINDOW}, {EXPECTED_SELECTED_FEATURES})"
+        )
         passed = False
     else:
         _ok(f"LSTM takes {shape}")
@@ -153,7 +168,9 @@ def check_lstm(path: Path) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE, help="extracted thesis archive root")
+    parser.add_argument(
+        "--archive", type=Path, default=DEFAULT_ARCHIVE, help="extracted thesis archive root"
+    )
     args = parser.parse_args()
 
     root: Path = args.archive
@@ -179,7 +196,7 @@ def main() -> int:
             continue
         try:
             results.append(check(path))
-        except Exception as exc:  # noqa: BLE001 — the point is to report any load failure
+        except Exception as exc:
             _fail(f"{type(exc).__name__}: {exc}")
             results.append(False)
 
@@ -187,7 +204,7 @@ def main() -> int:
     if scaler_path.exists():
         try:
             results.append(check_scaler_provenance(scaler_path, train_csv))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _fail(f"{type(exc).__name__}: {exc}")
             results.append(False)
 

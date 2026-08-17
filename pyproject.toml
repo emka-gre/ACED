@@ -68,6 +68,11 @@ ignore = [
     "N806",  # research-derived code uses X_train-style names in a few places
 ]
 
+[tool.ruff.lint.isort]
+# Without this, `aced` is treated as third-party in tests and gets merged into the
+# third-party import block.
+known-first-party = ["aced", "api"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B011"]
 

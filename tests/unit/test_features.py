@@ -71,7 +71,9 @@ def test_collinear_points_do_not_overshoot_arccos_domain() -> None:
     assert angle == pytest.approx(180.0)
 
 
-def test_all_features_finite_across_the_reference_clip(reference_frames: list[FrameLandmarks]) -> None:
+def test_all_features_finite_across_the_reference_clip(
+    reference_frames: list[FrameLandmarks],
+) -> None:
     for frame in reference_frames:
         assert all(math.isfinite(value) for value in compute_features(frame).values())
 
@@ -104,11 +106,15 @@ class TestHandComputedValues:
             frame = pose({name: (point[0], point[1]) for name, point in case["landmarks"].items()})
             computed = compute_features(frame)
             for name, expected in case["expected"].items():
-                assert computed[name] == pytest.approx(expected, abs=1e-12), f"{case['name']}: {name}"
+                assert computed[name] == pytest.approx(expected, abs=1e-12), (
+                    f"{case['name']}: {name}"
+                )
 
     def test_real_reference_frames(self, hand_computed: dict[str, Any]) -> None:
         for case in hand_computed["reference_frames"]:
             frame = pose({name: (point[0], point[1]) for name, point in case["landmarks"].items()})
             computed = compute_features(frame)
             for name, expected in case["expected"].items():
-                assert computed[name] == pytest.approx(expected, rel=1e-12), f"frame {case['frame']}: {name}"
+                assert computed[name] == pytest.approx(expected, rel=1e-12), (
+                    f"frame {case['frame']}: {name}"
+                )
