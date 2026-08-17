@@ -29,12 +29,12 @@
 
 ## 4. Pose Extraction
 
-- [ ] 4.1 Define `FrameLandmarks` (frame index, timestamp, named landmarks with x/y/z/visibility) and `VideoMeta` (fps, frame count, dimensions, fps-defaulted flag)
-- [ ] 4.2 Implement `PoseExtractor` as a generator over MediaPipe results, retaining only the nine model landmarks
-- [ ] 4.3 Preserve original frame indices across undetected frames so downstream gap detection works
-- [ ] 4.4 Raise a distinct `UnreadableVideoError` for undecodable files, separate from the no-pose-detected outcome
-- [ ] 4.5 Compute quality signals: undetected-frame proportion and mean landmark visibility. Multi-person detection is **out of scope** — `mp.solutions.pose` returns a single pose and exposes no signal about other people in frame; the limitation is disclosed in the report instead (7.8)
-- [ ] 4.6 Tests: detected/undetected frames, gap preservation, unreadable file, missing fps default, quality signals
+- [x] 4.1 Define `FrameLandmarks` (frame index, timestamp, named landmarks with x/y/z/visibility) and `VideoMeta` (fps, frame count, dimensions, fps-defaulted flag)
+- [x] 4.2 Implement `PoseExtractor` as a generator over MediaPipe results, retaining only the nine model landmarks
+- [x] 4.3 Preserve original frame indices across undetected frames so downstream gap detection works
+- [x] 4.4 Raise a distinct `UnreadableVideoError` for undecodable files, separate from the no-pose-detected outcome
+- [x] 4.5 Compute quality signals: undetected-frame proportion and mean landmark visibility. Multi-person detection is **out of scope** — `mp.solutions.pose` returns a single pose and exposes no signal about other people in frame; the limitation is disclosed in the report instead (7.8)
+- [x] 4.6 Tests: detected/undetected frames, gap preservation, unreadable file, missing fps default, quality signals
 
 ## 5. Features and Windowing
 
