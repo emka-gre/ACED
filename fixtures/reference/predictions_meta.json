@@ -1,0 +1,33 @@
+{
+  "stage": "predictions",
+  "generated_by": "scripts/generate_reference.py",
+  "source": "research pipeline in the thesis archive, imported unmodified",
+  "environment": {
+    "python": "3.11.14",
+    "platform": "macOS-14.6.1-x86_64-i386-64bit",
+    "numpy": "1.26.4",
+    "pandas": "2.2.3",
+    "sklearn": "1.7.2",
+    "keras": "3.12.4",
+    "mediapipe": "0.10.21",
+    "cv2": "4.11.0"
+  },
+  "outputs": [
+    "fixtures/reference/predictions_lstm_reference.csv",
+    "fixtures/reference/predictions_svm_reference.csv"
+  ],
+  "models": {
+    "lstm": {
+      "windows": 29,
+      "sound": 1,
+      "threshold": 0.5,
+      "scaling": "external, from training/LTSM/scaler.pkl"
+    },
+    "svm": {
+      "windows": 29,
+      "sound": 0,
+      "scaling": "internal to the saved Pipeline; raw features passed in",
+      "confidence": "decision-function margin only; probability=False"
+    }
+  }
+}
