@@ -44,6 +44,23 @@ make install     # creates .venv and installs the package with dev extras
 make check       # lint, type check, tests
 ```
 
+### No local Python 3.11, or on Apple Silicon
+
+`tensorflow==2.16.2` was pinned against an Intel Mac and has no macOS arm64 wheel, and
+`mediapipe==0.10.21` has no Linux arm64 wheel either — so on an Apple Silicon Mac neither a
+native install nor a plain arm64 container works. `Dockerfile` runs the pinned environment as
+`linux/amd64` instead (Docker Desktop emulates this transparently; nothing extra to pass):
+
+```sh
+docker compose build dev
+docker compose run --rm dev bash            # interactive shell in the pinned env
+docker compose run --rm dev pytest -m "not slow"
+docker compose run --rm dev pytest -m parity
+```
+
+The repo is bind-mounted into the container, so edits made on the host take effect without
+rebuilding; only a change to `pyproject.toml` does.
+
 ## Running it
 
 ```sh

@@ -1,0 +1,15 @@
+services:
+  # Dev shell: the pinned Python 3.11 / mediapipe / tensorflow environment, with the
+  # repo mounted so edits on the host are picked up without rebuilding the image.
+  # Usage:
+  #   docker compose build dev
+  #   docker compose run --rm dev bash
+  #   docker compose run --rm dev pytest -m "not slow"
+  #   docker compose run --rm dev pytest -m parity
+  dev:
+    build: .
+    platform: linux/amd64
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: sleep infinity
