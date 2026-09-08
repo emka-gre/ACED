@@ -61,16 +61,16 @@
 
 ## 7. Report Generation
 
-- [ ] 7.1 Define the report types (`AnalysisReport`, `Segment`, `Fault`, `QualityFlag`, `Summary`) with JSON serialization and no model-internal fields
-- [ ] 7.2 Implement fault merging: consecutive/overlapping faulty windows into distinct faults with frame and time ranges plus aggregated confidence
-- [ ] 7.3 Implement summary computation (duration, window count, faulty proportion, fault count)
-- [ ] 7.4 Implement z-score attribution against the within-climb sound baseline: dominant feature, value, baseline value, deviation, ranked top three contributors
-- [ ] 7.5 Detect the absent-sound-baseline case, mark attributions low-reliability, and state it in the report — do not silently fall back to the all-window mean
-- [ ] 7.6 Implement the feature-to-language templates and the explanation renderer; assert in tests that no feature identifiers or statistical terms appear in rendered text
-- [ ] 7.7 Populate quality flags from pose-extraction signals (undetected-frame proportion, mean visibility) plus the too-short-video case
-- [ ] 7.8 Attach model scope, limitations, and bundle version to every report, including that only a single climber is analyzed and that multi-person footage is unsupported
+- [x] 7.1 Define the report types (`AnalysisReport`, `Segment`, `Fault`, `QualityFlag`, `Summary`) with JSON serialization and no model-internal fields
+- [x] 7.2 Implement fault merging: consecutive/overlapping faulty windows into distinct faults with frame and time ranges plus aggregated confidence
+- [x] 7.3 Implement summary computation (duration, window count, faulty proportion, fault count)
+- [x] 7.4 Implement z-score attribution against the within-climb sound baseline: dominant feature, value, baseline value, deviation, ranked top three contributors
+- [x] 7.5 Detect the absent-sound-baseline case, mark attributions low-reliability, and state it in the report — do not silently fall back to the all-window mean
+- [x] 7.6 Implement the feature-to-language templates and the explanation renderer; assert in tests that no feature identifiers or statistical terms appear in rendered text
+- [x] 7.7 Populate quality flags from pose-extraction signals (undetected-frame proportion, mean visibility) plus the too-short-video case
+- [x] 7.8 Attach model scope, limitations, and bundle version to every report, including that only a single climber is analyzed and that multi-person footage is unsupported
 - [ ] 7.9 Port skeleton-overlay video rendering into `aced/render/`, coloring frames by assigned class, invoked on demand rather than during analysis
-- [ ] 7.10 Tests: fault merging (adjacent, separated, none), summary arithmetic, attribution ranking, missing baseline, explanation text hygiene, quality flags, serialization round-trip
+- [x] 7.10 Tests: fault merging (adjacent, separated, none), summary arithmetic, attribution ranking, missing baseline, explanation text hygiene, quality flags, serialization round-trip
 
 ## 8. CLI
 
