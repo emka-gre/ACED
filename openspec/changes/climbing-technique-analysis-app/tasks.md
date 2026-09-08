@@ -69,7 +69,7 @@
 - [x] 7.6 Implement the feature-to-language templates and the explanation renderer; assert in tests that no feature identifiers or statistical terms appear in rendered text
 - [x] 7.7 Populate quality flags from pose-extraction signals (undetected-frame proportion, mean visibility) plus the too-short-video case
 - [x] 7.8 Attach model scope, limitations, and bundle version to every report, including that only a single climber is analyzed and that multi-person footage is unsupported
-- [ ] 7.9 Port skeleton-overlay video rendering into `aced/render/`, coloring frames by assigned class, invoked on demand rather than during analysis
+- [x] 7.9 Port skeleton-overlay video rendering into `aced/render/`, coloring frames by assigned class, invoked on demand rather than during analysis. Written against the retained nine landmarks rather than transcribed from the archive's renderer, which was not reachable from this machine; the skeleton shows the nine joints the classifier consumed rather than MediaPipe's full thirty-three, so the overlay depicts what was actually judged
 - [x] 7.10 Tests: fault merging (adjacent, separated, none), summary arithmetic, attribution ranking, missing baseline, explanation text hygiene, quality flags, serialization round-trip
 
 ## 8. CLI
