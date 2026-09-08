@@ -17,13 +17,17 @@ import pytest
 
 from aced.features.windowing import Window
 from aced.inference.bundle import (
+    BUNDLE_ENV_VAR,
+    DEFAULT_BUNDLE_ID,
     BundleError,
     BundleManifest,
     Confidence,
     ModelBundle,
     ModelKind,
     Scaling,
+    default_bundle_path,
     load_bundle,
+    models_root,
 )
 from aced.inference.pipeline import InferencePipeline, PredictedClass, WindowResult, frame_classes
 
@@ -350,3 +354,57 @@ class TestFrameAttribution:
     def test_frames_no_window_covers_are_absent(self) -> None:
         results = [result(PredictedClass.SOUND, 10, 2)]
         assert set(frame_classes(results)) == {10, 11}
+
+
+class TestDefaultBundleResolution:
+    """Which bundle runs when the caller names none.
+
+    This is the one place a wrong answer is silent: every other bundle failure raises, but
+    quietly resolving to a different backend would produce a complete, plausible report from
+    a model the caller did not choose.
+    """
+
+    def test_the_environment_variable_wins_outright(self, monkeypatch: Any) -> None:
+        monkeypatch.setenv(BUNDLE_ENV_VAR, "/mounted/bundle")
+
+        assert default_bundle_path() == Path("/mounted/bundle")
+
+    def test_the_shipped_bundle_is_found_without_configuration(self, monkeypatch: Any) -> None:
+        monkeypatch.delenv(BUNDLE_ENV_VAR, raising=False)
+        root = models_root() / DEFAULT_BUNDLE_ID
+        if not root.is_dir():
+            pytest.skip(f"{DEFAULT_BUNDLE_ID} bundle not built — run scripts/build_bundles.py")
+
+        resolved = default_bundle_path()
+
+        assert resolved.parent == root
+        assert (resolved / "bundle.json").is_file()
+
+    def test_versions_are_ordered_numerically(self, monkeypatch: Any, tmp_path: Path) -> None:
+        """`v10` is newer than `v2`; a lexicographic sort says the opposite."""
+        monkeypatch.delenv(BUNDLE_ENV_VAR, raising=False)
+        monkeypatch.setattr("aced.inference.bundle.models_root", lambda: tmp_path)
+        for name in ("v1", "v2", "v10"):
+            version = tmp_path / "some-bundle" / name
+            version.mkdir(parents=True)
+            (version / "bundle.json").write_text("{}")
+
+        assert default_bundle_path("some-bundle").name == "v10"
+
+    def test_a_directory_without_a_manifest_is_not_a_version(
+        self, monkeypatch: Any, tmp_path: Path
+    ) -> None:
+        monkeypatch.delenv(BUNDLE_ENV_VAR, raising=False)
+        monkeypatch.setattr("aced.inference.bundle.models_root", lambda: tmp_path)
+        (tmp_path / "some-bundle" / "v1").mkdir(parents=True)
+        (tmp_path / "some-bundle" / "v2").mkdir(parents=True)
+        (tmp_path / "some-bundle" / "v1" / "bundle.json").write_text("{}")
+
+        assert default_bundle_path("some-bundle").name == "v1"
+
+    def test_no_bundle_at_all_says_what_to_do(self, monkeypatch: Any, tmp_path: Path) -> None:
+        monkeypatch.delenv(BUNDLE_ENV_VAR, raising=False)
+        monkeypatch.setattr("aced.inference.bundle.models_root", lambda: tmp_path)
+
+        with pytest.raises(BundleError, match=BUNDLE_ENV_VAR):
+            default_bundle_path("absent-bundle")

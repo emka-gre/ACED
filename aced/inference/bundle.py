@@ -28,6 +28,7 @@ Two declarations in the manifest carry real weight:
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -35,6 +36,19 @@ from typing import Any
 
 MANIFEST_NAME = "bundle.json"
 SCALER_NAME = "scaler.joblib"
+
+#: Environment variable naming a bundle directory outright, checked before anything is
+#: searched for. This is how a container points at a bundle mounted somewhere else.
+BUNDLE_ENV_VAR = "ACED_BUNDLE"
+
+#: The backend used when a caller names none.
+#:
+#: Provisional, pending task 3.6: both bundles reproduce the research pipeline, but neither
+#: has been evaluated on the held-out validation set yet, so this is not yet the *measured*
+#: better model. The LSTM is chosen because it is the only backend that declares
+#: `confidence: probability` — under the SVM every fault in a report carries no confidence at
+#: all, which is a materially thinner report. Revisit when 3.6 records metrics.
+DEFAULT_BUNDLE_ID = "lstm-arm-technique"
 
 
 class ModelKind(StrEnum):
@@ -272,3 +286,49 @@ def load_bundle(path: Path | str) -> ModelBundle:
         _validate_scaler(manifest, scaler)
 
     return ModelBundle(manifest=manifest, model=model, scaler=scaler, path=root)
+
+
+def models_root() -> Path:
+    """The repository's `models/` directory.
+
+    Resolved from this file rather than from the working directory, so `aced analyze` finds
+    the shipped bundles from anywhere. An installed wheel carries no `models/` — bundles are
+    data, not code, and are not packaged — so in that case this points at a directory that
+    does not exist and `default_bundle_path` says so plainly.
+    """
+    return Path(__file__).resolve().parents[2] / "models"
+
+
+def _version_key(path: Path) -> tuple[int, str]:
+    """Order `v2` before `v10`, which a plain lexicographic sort gets backwards."""
+    digits = path.name.removeprefix("v")
+    return (int(digits), "") if digits.isdigit() else (-1, path.name)
+
+
+def default_bundle_path(bundle_id: str = DEFAULT_BUNDLE_ID) -> Path:
+    """Where to load a bundle from when the caller named none.
+
+    `ACED_BUNDLE` wins outright if set. Otherwise the highest version of `bundle_id` under
+    `models/` is used. Failing to find one is an error with an instruction in it, not a
+    fallback: guessing at a different backend would silently change every prediction.
+    """
+    override = os.environ.get(BUNDLE_ENV_VAR)
+    if override:
+        return Path(override)
+
+    root = models_root() / bundle_id
+    versions = (
+        sorted(
+            (child for child in root.iterdir() if (child / MANIFEST_NAME).is_file()),
+            key=_version_key,
+        )
+        if root.is_dir()
+        else []
+    )
+    if not versions:
+        raise BundleError(
+            f"no {bundle_id} bundle found under {root} — build one with "
+            f"scripts/build_bundles.py, pass an explicit bundle path, or set "
+            f"{BUNDLE_ENV_VAR}"
+        )
+    return versions[-1]

@@ -74,9 +74,9 @@
 
 ## 8. CLI
 
-- [ ] 8.1 Implement `aced analyze <video>` writing the report as JSON, with options for bundle selection and overlay rendering
-- [ ] 8.2 Non-zero exit and a clear message on unreadable input or bundle load failure
-- [ ] 8.3 End-to-end test: CLI on the reference video produces the expected report
+- [x] 8.1 Implement `aced analyze <video>` writing the report as JSON, with options for bundle selection and overlay rendering. The stage wiring itself lives in `aced/analysis.py` rather than in the command, because the API worker (9.6) has to run exactly the same sequence and neither may drift from the other
+- [x] 8.2 Non-zero exit and a clear message on unreadable input or bundle load failure — distinct codes per cause (3 unreadable, 4 bundle, 5 overlay), since a script cannot ask what went wrong
+- [x] 8.3 End-to-end test: CLI on the reference video produces the expected report — `tests/parity/test_cli_parity.py`, asserting the CLI's JSON equals what `analyze()` produces for the same video and bundle. Archive-gated like the other reference-video tests, so `tests/e2e/` covers the same path on a synthesised video that runs anywhere
 
 ## 9. API Service
 

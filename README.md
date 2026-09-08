@@ -28,7 +28,7 @@ api/         FastAPI service and background worker
 web/         Vite + React + TypeScript frontend
 models/      versioned model bundles (weights + scaler + manifest)
 fixtures/    parity fixtures — recorded landmark and reference data
-tests/       unit, parity, and API suites
+tests/       unit, end-to-end, parity, and API suites
 scripts/     one-off migration and reference-generation scripts
 openspec/    the change proposal, design, specs, and task list
 ```
@@ -65,7 +65,18 @@ rebuilding; only a change to `pyproject.toml` does.
 
 ```sh
 aced analyze path/to/climb.mov -o report.json     # headless, same report the service produces
+aced analyze climb.mov --overlay overlay.mp4      # also render the classified skeleton
+aced analyze climb.mov --bundle models/svm-arm-technique/v1
 ```
+
+With no `-o` the report goes to stdout and everything else to stderr, so `aced analyze
+climb.mov | jq .summary` works. With no `--bundle` the newest shipped
+`lstm-arm-technique` bundle is used, or whatever `ACED_BUNDLE` points at. The overlay is
+rendered only when asked for, and only after the report is safely written.
+
+Exit codes: `0` analyzed (including the valid outcome of no climber being found), `2` bad
+arguments, `3` unreadable video, `4` bundle could not be loaded, `5` the report was written
+but the overlay failed.
 
 ```sh
 make api         # FastAPI service
