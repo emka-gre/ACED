@@ -31,6 +31,7 @@ fixtures/    parity fixtures — recorded landmark and reference data
 tests/       unit, end-to-end, parity, and API suites
 scripts/     one-off migration and reference-generation scripts
 docs/        pipeline.md — each stage, what it preserves, where real-time attaches
+             follow-ups.md — what is knowingly unfinished, and why
 openspec/    the change proposal, design, specs, and task list
 ```
 
@@ -131,7 +132,8 @@ Configuration is environment variables, all optional: `ACED_BUNDLE` (bundle dire
 
 [docs/pipeline.md](docs/pipeline.md) describes each stage of the analysis, which research
 semantics it preserves, where it deliberately differs, and where a real-time path would
-attach.
+attach. [docs/follow-ups.md](docs/follow-ups.md) lists what is knowingly unfinished —
+authentication, the missing thesis archive, and the costs accepted along the way.
 
 ## Parity with the research pipeline
 
