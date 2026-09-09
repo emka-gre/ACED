@@ -1,4 +1,4 @@
-.PHONY: help install lock test test-fast parity lint format typecheck check clean
+.PHONY: help install lock api test test-fast parity lint format typecheck check clean
 
 PYTHON ?= python3.11
 VENV   ?= .venv
@@ -20,6 +20,9 @@ lock: install ## Freeze the resolved environment
 	# machine. This reports the version instead. `aced` itself is excluded — the lock
 	# describes the environment the package runs in, not the package.
 	$(BIN)/pip list --format=freeze --exclude aced > requirements.lock
+
+api: ## Run the API service with reload, workers included
+	$(BIN)/uvicorn api.app:app --reload --port 8000
 
 test: ## Run the full test suite
 	$(BIN)/pytest

@@ -80,22 +80,22 @@
 
 ## 9. API Service
 
-- [ ] 9.1 Scaffold the FastAPI app, configuration, structured logging, and error handling
-- [ ] 9.2 Define the `Storage` interface with a local-filesystem implementation; content-address stored media
-- [ ] 9.3 Define the `JobQueue` interface with an in-process implementation for development
-- [ ] 9.4 Define the analysis record model and persistence (id, state, progress, expiry, bundle version, report, artifact references)
-- [ ] 9.5 Implement `POST /analyses`: streaming upload with format and size validation before acceptance, returns 202 with id and location
-- [ ] 9.6 Implement the worker: consumes the queue, runs the pipeline, reports progress, writes the report, marks terminal state
-- [ ] 9.7 Implement `GET /analyses/{id}`: state, progress, report when succeeded; 404 for unknown
-- [ ] 9.8 Implement `GET /analyses/{id}/report`: full report as JSON; explicit not-yet-available response when not succeeded
-- [ ] 9.9 Implement media endpoints for the original and overlay videos with byte-range support
-- [ ] 9.10 Implement on-request overlay rendering with a preparing state until the artifact exists
-- [ ] 9.11 Implement `DELETE /analyses/{id}` removing report, video, and artifacts
-- [ ] 9.12 Implement the expiry cleanup job
-- [ ] 9.13 Implement `GET /health` reporting service health and loaded bundle provenance; report unhealthy when the bundle fails to load
-- [ ] 9.14 Ensure failures are isolated: a crashed job lands in a terminal failed state and the service keeps serving
-- [ ] 9.15 Return client-safe failure reasons while logging diagnostics server-side
-- [ ] 9.16 API tests: accepted upload, rejected format, oversized upload, concurrent analyses, status transitions, report gating, range requests, deletion, expiry cleanup, health, worker-crash isolation
+- [x] 9.1 Scaffold the FastAPI app, configuration, structured logging, and error handling
+- [x] 9.2 Define the `Storage` interface with a local-filesystem implementation; content-address stored media
+- [x] 9.3 Define the `JobQueue` interface with an in-process implementation for development
+- [x] 9.4 Define the analysis record model and persistence (id, state, progress, expiry, bundle version, report, artifact references)
+- [x] 9.5 Implement `POST /analyses`: streaming upload with format and size validation before acceptance, returns 202 with id and location
+- [x] 9.6 Implement the worker: consumes the queue, runs the pipeline, reports progress, writes the report, marks terminal state
+- [x] 9.7 Implement `GET /analyses/{id}`: state, progress, report when succeeded; 404 for unknown
+- [x] 9.8 Implement `GET /analyses/{id}/report`: full report as JSON; explicit not-yet-available response when not succeeded
+- [x] 9.9 Implement media endpoints for the original and overlay videos with byte-range support
+- [x] 9.10 Implement on-request overlay rendering with a preparing state until the artifact exists
+- [x] 9.11 Implement `DELETE /analyses/{id}` removing report, video, and artifacts
+- [x] 9.12 Implement the expiry cleanup job
+- [x] 9.13 Implement `GET /health` reporting service health and loaded bundle provenance; report unhealthy when the bundle fails to load
+- [x] 9.14 Ensure failures are isolated: a crashed job lands in a terminal failed state and the service keeps serving
+- [x] 9.15 Return client-safe failure reasons while logging diagnostics server-side
+- [x] 9.16 API tests: accepted upload, rejected format, oversized upload, concurrent analyses, status transitions, report gating, range requests, deletion, expiry cleanup, health, worker-crash isolation
 
 ## 10. Web App
 

@@ -79,14 +79,30 @@ arguments, `3` unreadable video, `4` bundle could not be loaded, `5` the report 
 but the overlay failed.
 
 ```sh
-make api         # FastAPI service
-make worker      # background analysis worker
+make api         # FastAPI service, workers included
 cd web && npm run dev
 ```
 
 Analysis runs as a background job: `POST /analyses` returns `202` with an id, `GET /analyses/{id}`
 reports state and progress, and serves the report once it succeeds. A thirty-second climb is
 around nine hundred frames of pose inference and takes minutes, not seconds.
+
+| | |
+|---|---|
+| `POST /analyses` | upload a video, `202` with the analysis id |
+| `GET /analyses/{id}` | state, progress, and the report once it succeeded |
+| `GET /analyses/{id}/report` | the report alone; `409` until it exists |
+| `GET /analyses/{id}/video` | the original, with byte-range support for seeking |
+| `GET /analyses/{id}/overlay` | the skeleton overlay; the first request starts rendering it and answers `202` |
+| `DELETE /analyses/{id}` | removes the record, the video, and any rendered artifact |
+| `GET /health` | service health and the loaded bundle's provenance; `503` when no bundle loaded |
+
+The queue is in-process for development — a bounded thread pool inside the API — so there is
+no broker and no separate worker command to run. It sits behind an interface, and swapping in
+Celery or RQ later touches [api/services/queue.py](api/services/queue.py) and nothing else.
+
+Configuration is environment variables, all optional: `ACED_BUNDLE` (bundle directory),
+`ACED_STORAGE_ROOT`, `ACED_MAX_UPLOAD_MB`, `ACED_RETENTION_HOURS`, `ACED_WORKERS`.
 
 ## Parity with the research pipeline
 
