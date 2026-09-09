@@ -1,4 +1,45 @@
 services:
+  # The service itself: API and analysis workers in one container.
+  #
+  # Workers are threads inside the API process, not a second service — the queue is
+  # in-process by design (see api/services/queue.py), so there is no broker to run and
+  # nothing to scale independently yet. When the queue grows a real backend, this file
+  # gains a `worker` service running the same image with a different command, and
+  # nothing else about the deployment changes.
+  #
+  # Usage:
+  #   docker compose up api
+  #   curl localhost:8000/health
+  api:
+    build: .
+    platform: linux/amd64
+    command: uvicorn api.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      # Bundles are data, not code, and are not baked into the image — they are mounted
+      # with the repo below. Naming the path explicitly means a deployment that mounts a
+      # bundle somewhere else changes one variable.
+      ACED_BUNDLE: /app/models/lstm-arm-technique/v1
+      ACED_STORAGE_ROOT: /app/storage
+      ACED_MAX_UPLOAD_MB: "200"
+      ACED_RETENTION_HOURS: "24"
+      ACED_WORKERS: "2"
+    volumes:
+      - .:/app
+      # Uploaded climbs and rendered overlays. A named volume rather than a bind mount:
+      # this is footage of identifiable people, and it should not accumulate in a
+      # working copy where it can be committed or synced by accident.
+      - aced-storage:/app/storage
+    healthcheck:
+      # The service answers 503 until its bundle is loaded, so this is a real readiness
+      # check and not just "is the port open".
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status == 200 else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # Dev shell: the pinned Python 3.11 / mediapipe / tensorflow environment, with the
   # repo mounted so edits on the host are picked up without rebuilding the image.
   # Usage:
@@ -13,3 +54,6 @@ services:
       - .:/app
     working_dir: /app
     command: sleep infinity
+
+volumes:
+  aced-storage:

@@ -14,56 +14,14 @@ runs anywhere. The reference climb's actual content is asserted in the parity su
 from __future__ import annotations
 
 import json
-import os
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
-from aced.inference.bundle import BUNDLE_ENV_VAR, DEFAULT_BUNDLE_ID, models_root
+from aced.inference.bundle import DEFAULT_BUNDLE_ID, models_root
+from tests.e2e.conftest import FRAME_COUNT, run_cli
 
 pytestmark = pytest.mark.slow
-
-ROOT = Path(__file__).resolve().parents[2]
-FRAME_COUNT = 90
-WIDTH, HEIGHT = 320, 240
-
-
-def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
-    """Invoke the command the way a shell would, with no inherited bundle override."""
-    environment = dict(os.environ)
-    environment.pop(BUNDLE_ENV_VAR, None)
-    return subprocess.run(
-        [sys.executable, "-m", "aced.cli.main", *args],
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-        env=environment,
-        timeout=900,
-    )
-
-
-@pytest.fixture(scope="module")
-def synthetic_video(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A short, real, decodable video with no climber in it."""
-    cv2 = pytest.importorskip("cv2")
-    import numpy as np
-
-    path = tmp_path_factory.mktemp("video") / "synthetic.mp4"
-    writer = cv2.VideoWriter(str(path), cv2.VideoWriter.fourcc(*"mp4v"), 30.0, (WIDTH, HEIGHT))
-    if not writer.isOpened():
-        writer.release()
-        pytest.skip("no mp4v encoder available in this OpenCV build")
-
-    try:
-        for index in range(FRAME_COUNT):
-            frame = np.full((HEIGHT, WIDTH, 3), 30, dtype=np.uint8)
-            cv2.circle(frame, (index * 3 % WIDTH, HEIGHT // 2), 20, (200, 200, 200), -1)
-            writer.write(frame)
-    finally:
-        writer.release()
-    return path
 
 
 @pytest.fixture(scope="module")
