@@ -31,7 +31,14 @@
   "confidence": "none",
   "sound_class": 1,
   "trained_on": null,
-  "metrics": {},
+  "metrics": {
+    "accuracy": 0.899,
+    "fault_precision": 0.874,
+    "fault_recall": 0.933,
+    "fault_f1": 0.902,
+    "validation_windows": 178,
+    "validation_split": "df_X_m_val_3split"
+  },
   "scaler_provenance": "internal to the saved Pipeline; no separate scaler ships",
   "notes": "Classifies arm technique only, from 2D pose. Trained on a small set of climbers in one gym, labelled by one person. One climber per video."
 }

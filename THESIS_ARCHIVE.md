@@ -21,6 +21,38 @@ datasets, and it is the historical record of the research rather than a runtime 
 
 Only a subset is extracted; anything else can be pulled from the zip on demand.
 
+### The archive is currently missing — 2026-09-09
+
+Neither the zip nor the extracted tree is on this machine any more. Spotlight finds no copy,
+and no external volume holds one. Anything that needs `training/`, `streamlit/`, or the
+reference video — the pose parity suite, `scripts/build_bundles.py`, `scripts/
+verify_artifacts.py` — cannot run until it is restored.
+
+**The ML_pipeline splits survived separately**, in iCloud Drive:
+
+```
+~/Library/Mobile Documents/com~apple~CloudDocs/Desktop/datasets/
+├── df_X_m_train_3split.csv   1588 × 480   training features
+├── df_X_m_val_3split.csv      178 × 480   held-out validation features
+├── df_X_m_test_split.csv                  test features
+├── df_y_m_{train,val,test}_3split.csv     labels, one `label` column
+└── df_m_segments_{train,val,test}_3split.csv
+```
+
+The filenames differ from the archive's: `df_X_m_train_3split.csv` here against
+`ML_pipeline/df_X_m_train_3split_2.csv` there. **They are the same data**, established the
+same way the scaler provenance was: refitting a `StandardScaler` on this file reproduces the
+shipped LSTM scaler's `mean_` and `scale_` with a maximum absolute difference of `0.0`, and
+its 1588 rows match the scaler's `n_samples_seen_`. A file that were merely similar could not
+do that.
+
+That correspondence is what makes `df_X_m_val_3split.csv` usable as the held-out set for task
+3.6: it is the validation half of the same split the shipped model was fitted on. It is
+balanced — 89 fault windows, 89 sound.
+
+`scripts/evaluate_bundles.py` reads these. Copy them to `.thesis-data/` in the repo (which is
+gitignored, as every CSV outside `fixtures/` is) or pass `--data` with the directory.
+
 ## What this repo imports from it
 
 | Asset | Archive path | Used for |

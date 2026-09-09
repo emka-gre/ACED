@@ -31,7 +31,15 @@
   "confidence": "probability",
   "sound_class": 1,
   "trained_on": "2026-04-07",
-  "metrics": {},
+  "metrics": {
+    "accuracy": 0.882,
+    "fault_precision": 0.862,
+    "fault_recall": 0.91,
+    "fault_f1": 0.885,
+    "validation_windows": 178,
+    "roc_auc": 0.926,
+    "validation_split": "df_X_m_val_3split"
+  },
   "scaler_provenance": "fitted during LSTM training on df_X_m_train_3split_2.csv (1588 windows); verified in this build to be bitwise identical to a refit from that file",
   "notes": "Classifies arm technique only, from 2D pose. Trained on a small set of climbers in one gym, labelled by one person. One climber per video."
 }
