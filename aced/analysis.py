@@ -13,7 +13,7 @@ the shipped models' particular numbers.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +25,16 @@ from aced.pose.extractor import PoseExtraction, extract_poses
 from aced.pose.landmarks import FrameLandmarks
 from aced.report.build import build_report
 from aced.report.types import AnalysisReport
+
+#: How far through an analysis each stage ends. Pose extraction dominates — it is MediaPipe
+#: over every frame — so it owns most of the bar; inference is one batched call and report
+#: building is arithmetic. These are honest proportions of wall-clock time, not equal thirds.
+EXTRACTION_DONE = 0.7
+INFERENCE_DONE = 0.9
+
+#: Frames between progress callbacks during extraction. Reporting every frame would mean a
+#: lock acquisition per frame in the API worker for a bar that moves by a thousandth.
+PROGRESS_INTERVAL = 20
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +58,7 @@ def analyze(
     bundle: ModelBundle,
     *,
     extraction: PoseExtraction | None = None,
+    on_progress: Callable[[float], None] | None = None,
 ) -> Analysis:
     """Run pose extraction, features, windowing, inference and report building.
 
@@ -59,7 +70,17 @@ def analyze(
     `extraction` is the injection point that `extract_poses` provides for the pose stage, so
     a caller with frames already in hand — a test, or a worker that extracted once and is
     re-running under a second bundle — does not have to decode again.
+
+    `on_progress` is called with a fraction in [0, 1] as the analysis advances, for the API
+    worker's status resource. It is best-effort: a container that misreports its frame count
+    gives no meaningful denominator, so the fraction then advances only at stage boundaries
+    rather than being invented.
     """
+
+    def report_progress(fraction: float) -> None:
+        if on_progress is not None:
+            on_progress(fraction)
+
     extraction = extract_poses(source) if extraction is None else extraction
     manifest = bundle.manifest
 
@@ -72,12 +93,17 @@ def analyze(
 
     landmarks: list[FrameLandmarks] = []
     windows: list[Window] = []
-    for frame in extraction:
+    expected_frames = extraction.meta.frame_count
+    for processed, frame in enumerate(extraction, start=1):
         landmarks.append(frame)
         windows.extend(windower.push(frame.index, extractor.from_frame(frame)))
+        if expected_frames > 0 and processed % PROGRESS_INTERVAL == 0:
+            report_progress(EXTRACTION_DONE * min(processed / expected_frames, 1.0))
     windows.extend(windower.close())
+    report_progress(EXTRACTION_DONE)
 
     results = InferencePipeline(bundle).classify(windows)
+    report_progress(INFERENCE_DONE)
 
     report = build_report(
         video=extraction.meta,
@@ -86,6 +112,8 @@ def analyze(
         results=results,
         manifest=manifest,
     )
+
+    report_progress(1.0)
 
     return Analysis(
         report=report,
