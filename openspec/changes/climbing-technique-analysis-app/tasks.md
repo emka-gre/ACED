@@ -99,18 +99,18 @@
 
 ## 10. Web App
 
-- [ ] 10.1 Scaffold Vite + React + TypeScript with lint, format, and test setup
-- [ ] 10.2 Generate or hand-write the typed API client from the report and analysis schemas
-- [ ] 10.3 Build the upload view: file selection and drag-drop, client-side format and size validation, upload progress, retry on failure
-- [ ] 10.4 Build the status view: polled state and progress, addressable by analysis id so a climber can leave and return
-- [ ] 10.5 Build the report view: summary, fault list with times and explanations, quality flags shown prominently
-- [ ] 10.6 Build the video player with a fault-marked timeline; selecting a fault seeks to it, playback entering a fault indicates which one
-- [ ] 10.7 Add the overlay toggle preserving playback position
-- [ ] 10.8 Handle the empty-fault-list case with an explicit "no faults detected" statement
-- [ ] 10.9 Display analysis scope, model version, and limitations with every report
-- [ ] 10.10 Implement deletion with a confirmation step
-- [ ] 10.11 Make the layout usable at phone width with no horizontal scrolling
-- [ ] 10.12 Frontend tests for upload validation, status polling, fault seeking, and the empty and failed states
+- [x] 10.1 Scaffold Vite + React + TypeScript with lint, format, and test setup
+- [x] 10.2 Generate or hand-write the typed API client from the report and analysis schemas
+- [x] 10.3 Build the upload view: file selection and drag-drop, client-side format and size validation, upload progress, retry on failure
+- [x] 10.4 Build the status view: polled state and progress, addressable by analysis id so a climber can leave and return
+- [x] 10.5 Build the report view: summary, fault list with times and explanations, quality flags shown prominently
+- [x] 10.6 Build the video player with a fault-marked timeline; selecting a fault seeks to it, playback entering a fault indicates which one
+- [x] 10.7 Add the overlay toggle preserving playback position
+- [x] 10.8 Handle the empty-fault-list case with an explicit "no faults detected" statement
+- [x] 10.9 Display analysis scope, model version, and limitations with every report
+- [x] 10.10 Implement deletion with a confirmation step
+- [x] 10.11 Make the layout usable at phone width with no horizontal scrolling
+- [x] 10.12 Frontend tests for upload validation, status polling, fault seeking, and the empty and failed states
 
 ## 11. Integration and Delivery
 

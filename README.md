@@ -25,7 +25,7 @@ framed as observations rather than coaching instruction.
 ```
 aced/        the analysis package: pose, features, inference, report, render, cli
 api/         FastAPI service and background worker
-web/         Vite + React + TypeScript frontend
+web/         Vite + React + TypeScript frontend (its own npm scripts and tests)
 models/      versioned model bundles (weights + scaler + manifest)
 fixtures/    parity fixtures — recorded landmark and reference data
 tests/       unit, end-to-end, parity, and API suites
@@ -61,6 +61,17 @@ docker compose run --rm dev pytest -m parity
 The repo is bind-mounted into the container, so edits made on the host take effect without
 rebuilding; only a change to `pyproject.toml` does.
 
+### The frontend
+
+`web/` is a separate toolchain and runs on the host, not in the Python container — the image
+carries no Node. It needs Node 20 or newer.
+
+```sh
+cd web
+npm install
+npm run check    # eslint, prettier, tsc, and the vitest suite
+```
+
 ## Running it
 
 ```sh
@@ -79,9 +90,13 @@ arguments, `3` unreadable video, `4` bundle could not be loaded, `5` the report 
 but the overlay failed.
 
 ```sh
-make api         # FastAPI service, workers included
-cd web && npm run dev
+make api                      # FastAPI service, workers included
+cd web && npm install && npm run dev    # the web app, on :5173
 ```
+
+The dev server proxies `/analyses` and `/health` to the API, so the browser sees one origin
+and the service needs no CORS configuration for a case that only exists in development.
+`ACED_API_URL` points the proxy somewhere other than `localhost:8000`.
 
 Analysis runs as a background job: `POST /analyses` returns `202` with an id, `GET /analyses/{id}`
 reports state and progress, and serves the report once it succeeds. A thirty-second climb is
