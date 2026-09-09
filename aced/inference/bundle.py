@@ -43,11 +43,13 @@ BUNDLE_ENV_VAR = "ACED_BUNDLE"
 
 #: The backend used when a caller names none.
 #:
-#: Provisional, pending task 3.6: both bundles reproduce the research pipeline, but neither
-#: has been evaluated on the held-out validation set yet, so this is not yet the *measured*
-#: better model. The LSTM is chosen because it is the only backend that declares
-#: `confidence: probability` — under the SVM every fault in a report carries no confidence at
-#: all, which is a materially thinner report. Revisit when 3.6 records metrics.
+#: Settled by task 3.6 on the held-out validation split (178 windows, `scripts/
+#: evaluate_bundles.py`). The SVM scores marginally higher — F1 0.902 against 0.885 — but the
+#: two backends agree on 171 of 178 windows and the difference rests on five disagreements
+#: against two, which an exact McNemar test cannot distinguish from chance (p = 0.45). With
+#: no measurable accuracy advantage to trade against, the tiebreak is what else each offers:
+#: the LSTM is the only backend declaring `confidence: probability`, so under the SVM every
+#: fault in every report would carry no confidence at all.
 DEFAULT_BUNDLE_ID = "lstm-arm-technique"
 
 
