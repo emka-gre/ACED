@@ -30,6 +30,7 @@ models/      versioned model bundles (weights + scaler + manifest)
 fixtures/    parity fixtures — recorded landmark and reference data
 tests/       unit, end-to-end, parity, and API suites
 scripts/     one-off migration and reference-generation scripts
+docs/        pipeline.md — each stage, what it preserves, where real-time attaches
 openspec/    the change proposal, design, specs, and task list
 ```
 
@@ -90,9 +91,18 @@ arguments, `3` unreadable video, `4` bundle could not be loaded, `5` the report 
 but the overlay failed.
 
 ```sh
-make api                      # FastAPI service, workers included
+docker compose up api                   # the service in its pinned environment, on :8000
 cd web && npm install && npm run dev    # the web app, on :5173
 ```
+
+`docker compose up api` is the supported way to run it: the API and its analysis workers in
+one container, on the same pinned linux/amd64 environment the tests run under. It is healthy
+once `/health` answers 200, which happens only after the model bundle loads — the container's
+healthcheck is that endpoint, so "started" and "able to analyze" are not confused. Uploads go
+to a named volume, not into your working copy.
+
+`make api` runs the same service from a local venv instead, for a machine that can install the
+pinned dependencies natively.
 
 The dev server proxies `/analyses` and `/health` to the API, so the browser sees one origin
 and the service needs no CORS configuration for a case that only exists in development.
@@ -119,6 +129,10 @@ Celery or RQ later touches [api/services/queue.py](api/services/queue.py) and no
 Configuration is environment variables, all optional: `ACED_BUNDLE` (bundle directory),
 `ACED_STORAGE_ROOT`, `ACED_MAX_UPLOAD_MB`, `ACED_RETENTION_HOURS`, `ACED_WORKERS`.
 
+[docs/pipeline.md](docs/pipeline.md) describes each stage of the analysis, which research
+semantics it preserves, where it deliberately differs, and where a real-time path would
+attach.
+
 ## Parity with the research pipeline
 
 The packaged pipeline is required to reproduce the research pipeline's output numerically. The
@@ -132,8 +146,56 @@ model bundle instead of being refit from a training CSV at inference. This is nu
 no-op — the persisted scaler's parameters are identical to the refit result — and it removes a
 silent dependency on a 15 MB data file staying unchanged.
 
+### Last recorded run — 2026-09-10, `lstm-arm-technique` v1.0.0
+
+`docker compose run --rm dev pytest -m parity` → **17 passed, 9 skipped**.
+
+Passing, from committed fixtures: feature values against the recorded reference and against
+hand-computed values, run splitting across gaps, padding, stride alignment and the flush
+window, both bundles' window classifications, LSTM probabilities, the SVM inventing no
+confidence, the two backends returning identical result shapes, nothing being fitted at
+inference, and frame-level attribution.
+
+Skipped, all nine for the same reason — the reference video is not on this machine (see
+[THESIS_ARCHIVE.md](THESIS_ARCHIVE.md)): the pose stage against the recorded landmarks, the
+CLI's report against the library's, and the API's report against the CLI's.
+
+**So the claim this run supports is narrower than "parity holds".** Everything downstream of
+pose extraction is pinned to the research pipeline's recorded output. The pose stage itself —
+MediaPipe over real frames — is pinned only when the archive is present. Restore it and set
+`ACED_THESIS_ARCHIVE` to re-run the full suite; inside the container it must also be mounted,
+since the default path is under the host's home directory.
+
 ## Data and retention
 
-Uploaded videos are footage of identifiable people. Each analysis carries an expiry, expired
-media is deleted by a cleanup job, and a climber can delete an analysis and its video at any
-time. Nothing derived from a real climb belongs in this repository.
+Uploaded videos are footage of identifiable people in a gym. That makes them personal data,
+and it shapes several things in this repository that would otherwise look like over-engineering.
+
+**Retention is a field on the record from the moment it exists.** Every analysis carries an
+expiry (`ACED_RETENTION_HOURS`, 24 by default). A cleanup job sweeps expired analyses and
+deletes the stored video, any rendered overlay, and the record itself. Media is deleted before
+the record, so a crash between the two leaves a record pointing at absent media — which reports
+as not found — rather than a video on disk that nothing remembers to delete.
+
+**A climber can delete their own analysis at any time**, before expiry, through
+`DELETE /analyses/{id}` or the button in the web app. It removes the video, the overlay and the
+report together.
+
+**An analysis id is the only thing guarding a stranger's video.** Ids are random, not
+sequential, for that reason. There is no authentication in this version: anyone holding a link
+can view that analysis. That is a deliberate scope decision for a thesis deliverable, not an
+oversight — but it means the links should be treated as secrets, and it is the first thing to
+change before this is exposed to anyone beyond its author.
+
+**Stored media never enters the repository.** Uploads live in a Docker volume rather than a
+bind-mounted directory, so footage cannot accumulate in a working copy where it could be
+committed or picked up by a file-sync client. Every video extension and every CSV outside
+`fixtures/` is gitignored. The thesis reference video is not committed and must not be.
+
+**Derived data is still personal data.** Pose landmarks and features describe an identifiable
+person's body and movement; `fixtures/` contains landmark CSVs from one consenting climber and
+is the deliberate exception. Nothing else derived from a real climb belongs here.
+
+**What the service does not do:** no analytics, no third-party requests, no logging of video
+content. Logs carry analysis ids, sizes and states — never frames, landmarks or filenames from
+which a person could be identified.

@@ -114,8 +114,8 @@
 
 ## 11. Integration and Delivery
 
-- [ ] 11.1 End-to-end test: upload the reference video through the API, poll to completion, and assert the report matches the CLI's output for the same video
-- [ ] 11.2 Containerize the API and worker with the pinned environment; document local `docker compose` startup
-- [ ] 11.3 Document the retention policy and the personal-data implications of storing gym videos
-- [ ] 11.4 Write `docs/pipeline.md` describing each stage, the preserved thesis semantics, and where the real-time path would attach
-- [ ] 11.5 Verify the full parity suite passes against the shipped default bundle and record the result in the README
+- [x] 11.1 End-to-end test: upload the reference video through the API, poll to completion, and assert the report matches the CLI's output for the same video
+- [x] 11.2 Containerize the API and worker with the pinned environment; document local `docker compose` startup
+- [x] 11.3 Document the retention policy and the personal-data implications of storing gym videos
+- [x] 11.4 Write `docs/pipeline.md` describing each stage, the preserved thesis semantics, and where the real-time path would attach
+- [x] 11.5 Verify the full parity suite passes against the shipped default bundle and record the result in the README
