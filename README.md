@@ -65,8 +65,9 @@ rebuilding; only a change to `pyproject.toml` does.
 
 ### The frontend
 
-`web/` is a separate toolchain and runs on the host, not in the Python container — the image
-carries no Node. It needs Node 20 or newer.
+`web/` is a separate toolchain. The `dev` container carries no Node — it stops at the
+`runtime` stage, which has no use for built assets — so frontend work happens on the host and
+needs Node 20 or newer. (The `service` image does build the frontend, in its own Node stage.)
 
 ```sh
 cd web
@@ -92,22 +93,30 @@ arguments, `3` unreadable video, `4` bundle could not be loaded, `5` the report 
 but the overlay failed.
 
 ```sh
-docker compose up api                   # the service in its pinned environment, on :8000
-cd web && npm install && npm run dev    # the web app, on :5173
+docker compose up api     # everything, on http://localhost:8000
 ```
 
-`docker compose up api` is the supported way to run it: the API and its analysis workers in
-one container, on the same pinned linux/amd64 environment the tests run under. It is healthy
-once `/health` answers 200, which happens only after the model bundle loads — the container's
-healthcheck is that endpoint, so "started" and "able to analyze" are not confused. Uploads go
-to a named volume, not into your working copy.
+That is the whole thing: the API, its analysis workers, and the web app, in one container on
+one origin. The image builds the frontend in a Node stage and the service mounts the result —
+which is what hash-based routing buys, a static mount with no rewrite rules for a deployment
+to get wrong. It is healthy once `/health` answers 200, which happens only after the model
+bundle loads, and the container's healthcheck is that endpoint, so "started" and "able to
+analyze" are never confused. Uploads go to a named volume, not into your working copy.
 
-`make api` runs the same service from a local venv instead, for a machine that can install the
-pinned dependencies natively.
+For frontend work you want the Vite dev server instead, for hot reload:
 
-The dev server proxies `/analyses` and `/health` to the API, so the browser sees one origin
+```sh
+docker compose up api                   # the API on :8000
+cd web && npm install && npm run dev    # the web app on :5173, proxying to it
+```
+
+It proxies `/analyses` and `/health` through to the API, so the browser still sees one origin
 and the service needs no CORS configuration for a case that only exists in development.
 `ACED_API_URL` points the proxy somewhere other than `localhost:8000`.
+
+`make api` runs the service from a local venv rather than a container, for a machine that can
+install the pinned dependencies natively. It serves the frontend too, if `web/dist` exists —
+run `npm run build` first, or set `ACED_WEB_ROOT`.
 
 Analysis runs as a background job: `POST /analyses` returns `202` with an id, `GET /analyses/{id}`
 reports state and progress, and serves the report once it succeeds. A thirty-second climb is
@@ -128,7 +137,9 @@ no broker and no separate worker command to run. It sits behind an interface, an
 Celery or RQ later touches [api/services/queue.py](api/services/queue.py) and nothing else.
 
 Configuration is environment variables, all optional: `ACED_BUNDLE` (bundle directory),
-`ACED_STORAGE_ROOT`, `ACED_MAX_UPLOAD_MB`, `ACED_RETENTION_HOURS`, `ACED_WORKERS`.
+`ACED_STORAGE_ROOT`, `ACED_MAX_UPLOAD_MB`, `ACED_RETENTION_HOURS`, `ACED_WORKERS`,
+`ACED_WEB_ROOT` (built frontend; absent means the API serves no frontend, which is how every
+test and the CLI run it).
 
 [docs/pipeline.md](docs/pipeline.md) describes each stage of the analysis, which research
 semantics it preserves, where it deliberately differs, and where a real-time path would

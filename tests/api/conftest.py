@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable, Iterator
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -147,9 +148,10 @@ def make_client(
         bundle_loader: Callable[[Settings], ModelBundle] | None = None,
         job_queue: Any = None,
         store: Any = None,
+        web_root: Path | None = None,
     ) -> TestClient:
         app = create_app(
-            settings,
+            replace(settings, web_root=web_root) if web_root is not None else settings,
             store=store if store is not None else InMemoryAnalysisStore(),
             storage=storage,
             queue=job_queue if job_queue is not None else queue,

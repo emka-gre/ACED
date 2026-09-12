@@ -38,6 +38,30 @@ def load_configured_bundle(settings: Settings) -> ModelBundle:
     return load_bundle(path)
 
 
+def mount_frontend(app: FastAPI, settings: Settings) -> bool:
+    """Serve the built web app from the API, when there is one to serve.
+
+    Mounted last, so every API route is matched first and a future `/analyses` asset name
+    could never shadow the resource. Routing in the frontend is hash-based, which is what
+    makes this a static mount and not a rewrite rule: every deep link is still a GET of `/`,
+    so there is no history fallback to configure and nothing to keep in sync.
+
+    Absent assets are not an error. The API is useful on its own — the CLI parity suite, the
+    whole test suite, and anyone driving it with curl never build the frontend — so a missing
+    `index.html` means "no frontend today", logged once, not a failure to start.
+    """
+    from fastapi.staticfiles import StaticFiles
+
+    root = settings.resolved_web_root
+    if not (root / "index.html").is_file():
+        get_logger().info("no built frontend to serve", extra={"web_root": str(root)})
+        return False
+
+    app.mount("/", StaticFiles(directory=root, html=True), name="web")
+    get_logger().info("serving the web app", extra={"web_root": str(root)})
+    return True
+
+
 def create_app(
     settings: Settings | None = None,
     *,
@@ -90,6 +114,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(analyses_router)
     app.include_router(media_router)
+    mount_frontend(app, resolved)
     return app
 
 
