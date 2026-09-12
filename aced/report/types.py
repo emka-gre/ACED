@@ -35,6 +35,10 @@ class QualityFlag:
     def to_dict(self) -> dict[str, Any]:
         return {"kind": self.kind.value, "message": self.message}
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> QualityFlag:
+        return cls(kind=QualityFlagKind(payload["kind"]), message=str(payload["message"]))
+
 
 @dataclass(frozen=True, slots=True)
 class FeatureContribution:
@@ -59,6 +63,15 @@ class FeatureContribution:
             "deviation": self.deviation,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> FeatureContribution:
+        return cls(
+            feature=str(payload["feature"]),
+            value=float(payload["value"]),
+            baseline=float(payload["baseline"]),
+            deviation=float(payload["deviation"]),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class Attribution:
@@ -79,6 +92,17 @@ class Attribution:
             "dominant": self.dominant.to_dict() if self.dominant is not None else None,
             "top_contributors": [c.to_dict() for c in self.top_contributors],
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> Attribution:
+        dominant = payload.get("dominant")
+        return cls(
+            reliable=bool(payload["reliable"]),
+            dominant=FeatureContribution.from_dict(dominant) if dominant is not None else None,
+            top_contributors=tuple(
+                FeatureContribution.from_dict(c) for c in payload.get("top_contributors", ())
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +130,20 @@ class Segment:
             "low_reliability": self.low_reliability,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> Segment:
+        confidence = payload.get("confidence")
+        return cls(
+            index=int(payload["index"]),
+            frame_start=int(payload["frame_start"]),
+            frame_end=int(payload["frame_end"]),
+            time_start=float(payload["time_start"]),
+            time_end=float(payload["time_end"]),
+            predicted=str(payload["predicted"]),
+            confidence=float(confidence) if confidence is not None else None,
+            low_reliability=bool(payload["low_reliability"]),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class Fault:
@@ -129,6 +167,19 @@ class Fault:
             "attribution": self.attribution.to_dict(),
             "explanation": self.explanation,
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> Fault:
+        confidence = payload.get("confidence")
+        return cls(
+            frame_start=int(payload["frame_start"]),
+            frame_end=int(payload["frame_end"]),
+            time_start=float(payload["time_start"]),
+            time_end=float(payload["time_end"]),
+            confidence=float(confidence) if confidence is not None else None,
+            attribution=Attribution.from_dict(payload["attribution"]),
+            explanation=str(payload["explanation"]),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,6 +209,17 @@ class Summary:
             "message": self.message,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> Summary:
+        return cls(
+            duration_seconds=float(payload["duration_seconds"]),
+            window_count=int(payload["window_count"]),
+            faulty_window_count=int(payload["faulty_window_count"]),
+            faulty_proportion=float(payload["faulty_proportion"]),
+            fault_count=int(payload["fault_count"]),
+            message=str(payload["message"]),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class VideoInfo:
@@ -180,6 +242,17 @@ class VideoInfo:
             "height": self.height,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> VideoInfo:
+        return cls(
+            duration_seconds=float(payload["duration_seconds"]),
+            frame_count=int(payload["frame_count"]),
+            fps=float(payload["fps"]),
+            fps_defaulted=bool(payload["fps_defaulted"]),
+            width=int(payload["width"]),
+            height=int(payload["height"]),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ModelInfo:
@@ -197,6 +270,16 @@ class ModelInfo:
             "trained_on": self.trained_on,
             "metrics": dict(self.metrics),
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> ModelInfo:
+        trained_on = payload.get("trained_on")
+        return cls(
+            bundle_id=str(payload["bundle_id"]),
+            version=str(payload["version"]),
+            trained_on=str(trained_on) if trained_on is not None else None,
+            metrics={str(k): v for k, v in dict(payload.get("metrics", {})).items()},
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -227,6 +310,31 @@ class AnalysisReport:
             "scope": self.scope,
             "limitations": list(self.limitations),
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> AnalysisReport:
+        """The inverse of `to_dict`, for a report read back from storage.
+
+        Strict on shape: a missing key raises rather than defaulting, because a report that
+        deserialises with holes in it is one the API would then serve as complete.
+        """
+        return cls(
+            video=VideoInfo.from_dict(payload["video"]),
+            summary=Summary.from_dict(payload["summary"]),
+            segments=tuple(Segment.from_dict(s) for s in payload["segments"]),
+            faults=tuple(Fault.from_dict(f) for f in payload["faults"]),
+            quality_flags=tuple(QualityFlag.from_dict(q) for q in payload["quality_flags"]),
+            model=ModelInfo.from_dict(payload["model"]),
+            scope=str(payload["scope"]),
+            limitations=tuple(str(item) for item in payload["limitations"]),
+        )
+
+    @classmethod
+    def from_json(cls, text: str) -> AnalysisReport:
+        import json
+
+        payload: dict[str, Any] = json.loads(text)
+        return cls.from_dict(payload)
 
     def to_json(self, **kwargs: Any) -> str:
         import json

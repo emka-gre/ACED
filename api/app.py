@@ -25,12 +25,19 @@ from api.logging import configure_logging, get_logger
 from api.routes.analyses import router as analyses_router
 from api.routes.health import router as health_router
 from api.routes.media import router as media_router
-from api.services.cleanup import CleanupScheduler
+from api.services.cleanup import CleanupScheduler, reconcile
 from api.services.queue import InProcessJobQueue, JobQueue
-from api.services.records import AnalysisStore, InMemoryAnalysisStore
+from api.services.records import AnalysisStore
+from api.services.sqlite import DATABASE_FILENAME, Database, SqliteAnalysisStore
 from api.services.storage import LocalStorage
 
 BundleLoader = Callable[[Settings], ModelBundle]
+
+
+def _require(database: Database | None) -> Database:
+    if database is None:  # pragma: no cover — only reachable through a programming error
+        raise RuntimeError("no database was opened for the default store")
+    return database
 
 
 def load_configured_bundle(settings: Settings) -> ModelBundle:
@@ -74,9 +81,13 @@ def create_app(
     resolved = settings or Settings.from_env()
     configure_logging()
 
+    # The database lives beside the media, not among it: the storage root's direct children
+    # are the objects reconciliation compares against the records, and the database file
+    # must never be something that pass could mistake for an orphan.
+    database = Database(resolved.storage_root / "db" / DATABASE_FILENAME) if store is None else None
     context = ServiceContext(
         settings=resolved,
-        store=store if store is not None else InMemoryAnalysisStore(),
+        store=store if store is not None else SqliteAnalysisStore(_require(database)),
         storage=storage if storage is not None else LocalStorage(resolved.storage_root),
         queue=queue if queue is not None else InProcessJobQueue(resolved.worker_count),
     )
@@ -93,6 +104,15 @@ def create_app(
             context.bundle_error = str(error)
             logger.exception("model bundle could not be loaded; service is unhealthy")
 
+        # Before any request is served: whatever the previous process left half-done is
+        # settled now, so no client ever polls a record that stopped moving when it died.
+        failed, orphaned = reconcile(context.store, context.storage)
+        if failed or orphaned:
+            logger.info(
+                "startup reconciliation",
+                extra={"analyses_failed": len(failed), "media_removed": len(orphaned)},
+            )
+
         if start_cleanup:
             context.cleanup = CleanupScheduler(context.store, context.storage)
             context.cleanup.start()
@@ -102,6 +122,8 @@ def create_app(
             if context.cleanup is not None:
                 context.cleanup.stop()
             context.queue.shutdown(wait=True)
+            if database is not None:
+                database.close()
 
     app = FastAPI(
         title="ACED",

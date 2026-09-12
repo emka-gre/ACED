@@ -62,6 +62,8 @@ class Storage(Protocol):
 
     def local_path(self, key: str) -> Path | None: ...
 
+    def keys(self) -> set[str]: ...
+
 
 class LocalObjectWriter:
     """Writes to a temporary file, then names it by the digest of what was written.
@@ -187,6 +189,14 @@ class LocalStorage:
         except ObjectNotFoundError:
             return None
         return path if path.is_file() else None
+
+    def keys(self) -> set[str]:
+        """Every object held, by key — what reconciliation compares against the records.
+
+        Files only, directly under the root. `incoming/` holds partial uploads that a
+        writer is still filling, and anything else that is a directory is not an object.
+        """
+        return {child.name for child in self._root.iterdir() if child.is_file()}
 
     def reserve(self, suffix: str) -> Path:
         """A path for something an external tool will write.

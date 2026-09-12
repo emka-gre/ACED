@@ -1,9 +1,9 @@
 ## 1. Persistence
 
-- [ ] 1.1 `SqliteAnalysisStore` implementing `AnalysisStore`; records including the report serialised as JSON; one file under the storage root, schema created on first open
-- [ ] 1.2 Startup reconciliation: mark `running` records failed with a client-safe reason; delete media no record names
-- [ ] 1.3 Make SQLite the default store; keep the in-memory store for tests
-- [ ] 1.4 Tests: records survive a store reopen, interrupted analysis is failed at startup, orphaned media is removed, the whole API suite passes unchanged against the SQLite store
+- [x] 1.1 `SqliteAnalysisStore` implementing `AnalysisStore`; records including the report serialised as JSON; one file under the storage root, schema created on first open
+- [x] 1.2 Startup reconciliation: mark `running` records failed with a client-safe reason; delete media no record names
+- [x] 1.3 Make SQLite the default store; keep the in-memory store for tests
+- [x] 1.4 Tests: records survive a store reopen, interrupted analysis is failed at startup, orphaned media is removed, the whole API suite passes unchanged against the SQLite store
 
 ## 2. Accounts and sessions
 

@@ -32,7 +32,8 @@ from aced.report.types import AnalysisReport
 from api.app import create_app
 from api.config import Settings
 from api.services.queue import Job
-from api.services.records import InMemoryAnalysisStore
+from api.services.records import AnalysisStore, InMemoryAnalysisStore
+from api.services.sqlite import Database, SqliteAnalysisStore
 from api.services.storage import LocalStorage
 
 VIDEO_BYTES = b"\x00\x00\x00\x20ftypmp42" + bytes(range(256)) * 8
@@ -119,6 +120,9 @@ def settings(tmp_path: Path) -> Settings:
         max_upload_bytes=4096,
         retention=timedelta(hours=1),
         worker_count=1,
+        # Pinned to somewhere empty: the default would find a real `web/dist` on a machine
+        # that has run `npm run build`, and the suite must not change shape with that.
+        web_root=tmp_path / "no-frontend",
     )
 
 
@@ -136,11 +140,29 @@ def analyze_stub(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Analysis]:
     return fake_analyze
 
 
+@pytest.fixture(params=["memory", "sqlite"])
+def record_store(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[AnalysisStore]:
+    """Every API test runs twice, once per store.
+
+    The SQLite store's contract is "the same as the in-memory one", and the only proof of a
+    contract like that is the whole suite passing against both. A separate handful of SQLite
+    tests would show it works; this shows nothing about the API depends on which it is.
+    """
+    if request.param == "memory":
+        yield InMemoryAnalysisStore()
+        return
+    database = Database(tmp_path / "db" / "aced.sqlite3")
+    try:
+        yield SqliteAnalysisStore(database)
+    finally:
+        database.close()
+
+
 @pytest.fixture
 def make_client(
-    settings: Settings, storage: LocalStorage, queue: ManualJobQueue
+    settings: Settings, storage: LocalStorage, queue: ManualJobQueue, record_store: AnalysisStore
 ) -> Iterator[Callable[..., TestClient]]:
-    """Build a service against this test's settings, storage and queue."""
+    """Build a service against this test's settings, storage, queue and store."""
     clients: list[TestClient] = []
 
     def build(
@@ -152,7 +174,7 @@ def make_client(
     ) -> TestClient:
         app = create_app(
             replace(settings, web_root=web_root) if web_root is not None else settings,
-            store=store if store is not None else InMemoryAnalysisStore(),
+            store=store if store is not None else record_store,
             storage=storage,
             queue=job_queue if job_queue is not None else queue,
             bundle_loader=bundle_loader or (lambda _: stub_bundle()),

@@ -20,6 +20,10 @@ MODEL_UNAVAILABLE = (
     "with your video."
 )
 UNEXPECTED = "The analysis failed unexpectedly and the failure has been logged."
+INTERRUPTED = (
+    "The service restarted while this analysis was in progress, and it could not be resumed. "
+    "Please upload the video again."
+)
 
 
 def client_safe_reason(error: BaseException) -> str:

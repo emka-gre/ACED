@@ -95,6 +95,46 @@ class AnalysisRecord:
     def is_expired(self, now: datetime | None = None) -> bool:
         return (now or utcnow()) >= self.expires_at
 
+    def to_dict(self) -> dict[str, Any]:
+        """Everything, for persistence. Not the status resource — that omits fields on
+        purpose; this omits nothing, or a restart would lose whatever it left out."""
+        return {
+            "id": self.id,
+            "state": self.state.value,
+            "created_at": self.created_at.isoformat(),
+            "expires_at": self.expires_at.isoformat(),
+            "filename": self.filename,
+            "video_key": self.video_key,
+            "size_bytes": self.size_bytes,
+            "progress": self.progress,
+            "bundle_id": self.bundle_id,
+            "bundle_version": self.bundle_version,
+            "report": self.report.to_dict() if self.report is not None else None,
+            "failure_reason": self.failure_reason,
+            "overlay": self.overlay.value,
+            "overlay_key": self.overlay_key,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> AnalysisRecord:
+        report = payload.get("report")
+        return cls(
+            id=str(payload["id"]),
+            state=AnalysisState(payload["state"]),
+            created_at=datetime.fromisoformat(payload["created_at"]),
+            expires_at=datetime.fromisoformat(payload["expires_at"]),
+            filename=str(payload["filename"]),
+            video_key=str(payload["video_key"]),
+            size_bytes=int(payload["size_bytes"]),
+            progress=float(payload.get("progress", 0.0)),
+            bundle_id=payload.get("bundle_id"),
+            bundle_version=payload.get("bundle_version"),
+            report=AnalysisReport.from_dict(report) if report is not None else None,
+            failure_reason=payload.get("failure_reason"),
+            overlay=ArtifactState(payload.get("overlay", ArtifactState.ABSENT.value)),
+            overlay_key=payload.get("overlay_key"),
+        )
+
     def to_status(self) -> dict[str, Any]:
         """The status resource.
 
