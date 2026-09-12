@@ -1,6 +1,9 @@
 services:
   # The service itself: API and analysis workers in one container.
   #
+  # One container, one origin: it serves the API and the built web app together, which is
+  # what hash-based routing in the frontend buys — a static mount, no rewrite rules.
+  #
   # Workers are threads inside the API process, not a second service — the queue is
   # in-process by design (see api/services/queue.py), so there is no broker to run and
   # nothing to scale independently yet. When the queue grows a real backend, this file
@@ -9,27 +12,34 @@ services:
   #
   # Usage:
   #   docker compose up api
+  #   open http://localhost:8000        # the web app
   #   curl localhost:8000/health
   api:
-    build: .
+    build:
+      context: .
+      target: service
     platform: linux/amd64
-    command: uvicorn api.app:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
-      # Bundles are data, not code, and are not baked into the image — they are mounted
-      # with the repo below. Naming the path explicitly means a deployment that mounts a
-      # bundle somewhere else changes one variable.
+      # The shipped bundles come in with the source, so this path resolves inside the
+      # image. Naming it explicitly rather than relying on the default is what lets a
+      # deployment mount a different bundle and change one variable to use it.
       ACED_BUNDLE: /app/models/lstm-arm-technique/v1
       ACED_STORAGE_ROOT: /app/storage
       ACED_MAX_UPLOAD_MB: "200"
       ACED_RETENTION_HOURS: "24"
       ACED_WORKERS: "2"
+      ACED_WEB_ROOT: /app/web/dist
     volumes:
-      - .:/app
-      # Uploaded climbs and rendered overlays. A named volume rather than a bind mount:
-      # this is footage of identifiable people, and it should not accumulate in a
-      # working copy where it can be committed or synced by accident.
+      # Deliberately no bind mount of the repository. This runs what the image was built
+      # with — including the frontend build, which a mounted working copy would shadow with
+      # whatever `web/dist` happens to hold locally, or with nothing at all. Rebuild to
+      # deploy a change; the `dev` service below is the one that picks up edits live.
+      #
+      # Uploaded climbs and rendered overlays go to a named volume: this is footage of
+      # identifiable people, and it should not accumulate in a working copy where it can be
+      # committed or synced by accident.
       - aced-storage:/app/storage
     healthcheck:
       # The service answers 503 until its bundle is loaded, so this is a real readiness
@@ -48,7 +58,11 @@ services:
   #   docker compose run --rm dev pytest -m "not slow"
   #   docker compose run --rm dev pytest -m parity
   dev:
-    build: .
+    build:
+      context: .
+      # Stops before the frontend build: the dev shell runs the Python suites and has no use
+      # for built assets, and waiting on npm to start a shell would be a poor trade.
+      target: runtime
     platform: linux/amd64
     volumes:
       - .:/app

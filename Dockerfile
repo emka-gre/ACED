@@ -1,13 +1,31 @@
 # syntax=docker/dockerfile:1
 #
-# Dev/CI image providing the pinned Python 3.11 + mediapipe + tensorflow environment
-# (see pyproject.toml) on machines that can't install it natively — no local Python
-# 3.11, or an Apple Silicon Mac where tensorflow==2.16.2 has no macOS arm64 wheel.
+# Two things are built here: the Python service, and the frontend it serves.
 #
-# Pinned to linux/amd64: mediapipe==0.10.21 publishes no Linux wheel for aarch64
-# (only manylinux_2_28_x86_64), so this must run under emulation on Apple Silicon.
-# Docker Desktop provides that automatically; no extra flags needed at build/run time.
-FROM --platform=linux/amd64 python:3.11-slim
+# The Python half is pinned to linux/amd64 because mediapipe==0.10.21 publishes no Linux
+# wheel for aarch64 (only manylinux_2_28_x86_64), so it must run under emulation on Apple
+# Silicon. Docker Desktop provides that automatically; no extra flags at build or run time.
+#
+# The frontend half is not: its output is JavaScript, which is the same whatever built it, so
+# it builds natively on the host's own architecture. Under emulation this stage would be the
+# slowest part of the image for no benefit at all.
+
+# --- the frontend ------------------------------------------------------------------------
+FROM --platform=$BUILDPLATFORM node:22-slim AS web-build
+
+WORKDIR /web
+
+# Dependencies before sources, so editing a component does not reinstall node_modules.
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ ./
+RUN npm run build
+
+# --- the Python environment --------------------------------------------------------------
+# Everything the tests and the dev shell need. `docker compose build dev` stops here, so a
+# dev image never waits on the frontend build.
+FROM --platform=linux/amd64 python:3.11-slim AS runtime
 
 # Runtime shared libraries mediapipe and opencv-python (non-headless) need that the
 # slim base image doesn't ship.
@@ -31,3 +49,13 @@ RUN pip install --upgrade pip && pip install -e ".[api,dev]"
 COPY . .
 
 CMD ["bash"]
+
+# --- the service -------------------------------------------------------------------------
+# The runtime plus the built frontend, so one container serves the API and the web app from
+# one origin. `web/dist` is gitignored and .dockerignored, so this copy is the only way it
+# gets in — the image never carries a stale build from someone's working copy.
+FROM runtime AS service
+
+COPY --from=web-build /web/dist /app/web/dist
+
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]

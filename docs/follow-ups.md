@@ -18,11 +18,13 @@ Ordered roughly by what would bite first.
       the moment a second person's video is on the server. Until then, treat analysis links as
       secrets. See the README's *Data and retention* section, which says so plainly.
 
-- [ ] **Decide what serves the frontend in production.** `docker compose up api` runs the API
-      only. `web/` is built by Vite and served by the dev server, which is not a production
-      server. Either the API serves the built assets (which is why routing is hash-based —
-      it needs no rewrite rules) or a static host does, with the API behind a path. Neither has
-      been chosen, and `Dockerfile` builds no Node stage.
+- [x] ~~**Decide what serves the frontend in production.**~~ Done: the API serves the built
+      assets. `Dockerfile` gained a Node stage that builds `web/dist` on the host's own
+      architecture — its output is JavaScript, so emulating linux/amd64 for it would cost time
+      and buy nothing — and the `service` stage copies the result in. The mount is registered
+      after every API route, so an asset can never shadow a resource, and a missing build is
+      not an error: the API runs identically without one, which is how the tests and the CLI
+      run it. `docker compose up api` is now the whole application on one origin.
 
 - [ ] **Confirm the phone layout by hand.** Task 10.11 asks for a usable layout at phone width
       with no horizontal scrolling. It is written that way — one column that widens,
