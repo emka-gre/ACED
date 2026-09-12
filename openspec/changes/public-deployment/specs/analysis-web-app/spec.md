@@ -1,35 +1,51 @@
 ## ADDED Requirements
 
-### Requirement: Token custody
+### Requirement: Sign-in
 
-The web app SHALL retain the owner token for each analysis it starts, use it for every
-request concerning that analysis, and present a link containing it so the climber can return
-to or deliberately share the analysis.
+The web app SHALL require a signed-in climber before showing anything but the sign-in and
+registration screens, and SHALL keep them signed in across visits until they sign out or the
+session expires.
 
-#### Scenario: Token retained after upload
+#### Scenario: Signed-out visitor
 
-- **WHEN** an upload succeeds
-- **THEN** the app stores the analysis identifier and its owner token in the browser
-- **AND** subsequent requests for that analysis carry the token
+- **WHEN** a visitor with no session opens the app
+- **THEN** they are shown sign-in, with a way to register
 
-#### Scenario: Returning to an analysis
+#### Scenario: Registration
 
-- **WHEN** a climber opens a link to an analysis that includes its token
-- **THEN** the analysis is shown
-- **AND** the token is stored so the plain link works on that browser afterwards
+- **WHEN** a visitor registers with an address and a password
+- **THEN** they are signed in and taken to the upload screen
+- **AND** if an invite code is required, the form asks for it
 
-#### Scenario: Analysis opened without a token
+#### Scenario: Forgotten password
 
-- **WHEN** a climber opens a link to an analysis whose token the browser does not hold
-- **THEN** the app states that this analysis cannot be opened from this browser without its
-  original link
-- **AND** it does not present this as the analysis being absent
+- **WHEN** a climber looks for a way to reset a forgotten password
+- **THEN** the sign-in screen states plainly that there is no self-service reset and what to
+  do instead
 
-#### Scenario: Shareable link offered
+#### Scenario: Session expired mid-visit
 
-- **WHEN** an analysis has finished
-- **THEN** the app offers a link containing the token, described as granting access to the
-  video and report
+- **WHEN** a request fails because the session is no longer valid
+- **THEN** the app returns the climber to sign-in with a message saying why
+- **AND** does not present it as an error in the analysis
+
+### Requirement: My analyses
+
+The web app SHALL show a signed-in climber their own analyses, so a report can be found again
+without having kept its link.
+
+#### Scenario: Listing
+
+- **WHEN** a signed-in climber opens the app
+- **THEN** their analyses are listed newest first, with state, date, and a summary line for
+  each that has finished
+- **AND** selecting one opens it
+
+#### Scenario: Another account's link
+
+- **WHEN** a signed-in climber opens a link to an analysis they do not own
+- **THEN** the app states that there is no analysis at this link for this account
+- **AND** offers their own list
 
 ### Requirement: Informed upload
 
@@ -53,3 +69,13 @@ they may share the footage.
 
 - **WHEN** a report is shown
 - **THEN** it states when the analysis and its video will be deleted automatically
+
+### Requirement: Account deletion
+
+The web app SHALL let a climber delete their account, after confirming what that removes.
+
+#### Scenario: Deleting the account
+
+- **WHEN** a climber chooses to delete their account and confirms
+- **THEN** the account and every analysis under it are removed
+- **AND** the climber is signed out and returned to the sign-in screen

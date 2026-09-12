@@ -10,66 +10,109 @@ that suite, and nine of its tests currently skip because the thesis archive is m
 the evidence available is weaker than it will look. That is stated plainly rather than
 assumed away.
 
+The other constraint is what this service does not have: no email. It cannot verify an
+address, send a reset link, or notify anyone. Every decision about accounts below is shaped by
+that, and the alternative — standing up email delivery — is deliberately out of scope.
+
 ## Goals / Non-Goals
 
 **Goals**
 
-- A stranger who finds the URL cannot read someone else's climb, and cannot make the server
-  do expensive work without limit.
+- A climber's video and report are visible to that climber and nobody else.
+- A stranger who finds the URL cannot make the server do expensive work without limit.
 - A restart loses nothing and leaks nothing.
 - The image is small enough to deploy on ordinary hosting, with the numbers unchanged.
-- A climber knows what happens to their video before they upload it.
+- A climber knows what happens to their video before they upload it, and can remove
+  everything — account included — when they want to.
 
 **Non-goals**
 
-- User accounts, sessions, password reset, email. Out of scope; see the proposal.
+- Email, and everything that depends on it: verification, reset, notifications.
+- Sharing a report with a non-owner. A follow-up, once accounts exist.
 - Multi-machine deployment. The queue stays in-process.
 - Any change to the analysis itself. Not one line of `aced/` should need to move.
 
 ## Decisions
 
-### An owner token per analysis, not user accounts
+### Accounts: email and password, no verification
 
-`POST /analyses` returns `{id, token}`. The token is a random secret; only its hash is stored.
-Every subsequent request for that analysis must present it.
+A climber registers with an email address and a password. The address is an identifier and a
+login name; nothing is ever sent to it, and it is not verified. Passwords are hashed with
+Argon2id and only the hash is stored.
 
-*Why:* it fits the resource model that already exists. An analysis is already an anonymous,
-expiring, self-contained thing addressed by an opaque id — attaching a secret to it is a
-small change, where accounts would introduce a user model that nothing else in the system
-needs.
+*Why email as the login name:* it is the one identifier people reliably remember, and it
+keeps the door open for verification and reset later without a migration. Not verifying it
+now is an honest consequence of having no mail delivery, and it is cheap: an unverified
+address costs the service nothing, since nothing is sent to it.
 
-*Trade-off:* a climber who loses the token loses the analysis. That is a real cost and the
-web app has to carry it — it keeps the token in `localStorage` keyed by analysis id, and the
-link it shows contains the token so it can be bookmarked and shared deliberately.
+*Why Argon2id:* it is the current recommendation for password hashing, `argon2-cffi` is a
+small, maintained dependency with no native build on the platforms this runs on, and there is
+no reason to choose a weaker scheme on a service that will hold real passwords.
 
-*Alternative considered:* signed cookies. Rejected — a cookie is per-browser, and the shareable
-link is the feature the polling design exists for.
+*What a forgotten password means:* there is no self-service recovery. The account's analyses
+are not lost — an operator with database access can set a new password — but the climber
+cannot do it alone. The sign-in screen says so rather than implying a reset flow that does not
+exist. This is the cost of no email, and it is the one to revisit first if the service ever
+gets it.
 
-### Unauthorized reads answer 404, not 403
+### Sessions in a cookie, stored server-side
 
-A request for an analysis without the right token gets the same answer as a request for an id
-that never existed.
+Signing in creates a session row and sets an `HttpOnly`, `Secure`, `SameSite=Lax` cookie
+carrying only the session id. Signing out deletes the row. Sessions expire.
 
-*Why:* 403 confirms the id exists. Given that ids are the addressing scheme, an endpoint that
-distinguishes "wrong token" from "no such analysis" is an oracle for enumerating them.
+*Why a cookie and not a bearer token:* a `<video>` element issues its own requests and cannot
+be given a header. A cookie goes with every request the browser makes, which means the media
+endpoints are protected by exactly the same mechanism as the JSON ones, and nothing sensitive
+ever appears in a URL. This is the single biggest simplification accounts buy over
+per-analysis tokens.
 
-### Media URLs carry the token as a query parameter
+*Why server-side rather than signed:* sign-out and account deletion have to actually end the
+session, not just ask the browser to forget it. A row can be deleted; a signed cookie is valid
+until it expires wherever a copy exists.
 
-JSON endpoints take `Authorization: Bearer <token>`. The video and overlay cannot: a `<video>`
-element issues its own requests and cannot be given a header, which is also why range requests
-had to be implemented in the first place.
+*CSRF:* the API is same-origin with the web app and every state-changing route is a `POST` or
+`DELETE` from script, never a form. `SameSite=Lax` keeps a cross-site page from riding the
+cookie on those, and the multipart upload — the one request a cross-site form could
+plausibly forge — additionally requires a custom header that a form cannot set.
 
-*Why this way:* the alternative is a cookie scoped to the media path, which reintroduces the
-per-browser problem for the one case where the URL is most likely to be shared with a coach.
+### Ownership: analyses belong to the account that uploaded them
 
-*Trade-off, stated because it is real:* tokens in URLs end up in server logs and browser
-history. The mitigation is that these are our own logs, the structured logger already records
-no URLs, and the token grants access to one expiring analysis rather than an account.
+Every analysis carries an `owner_id`. Every analysis endpoint requires a session, loads the
+record, and compares. A mismatch is answered exactly as an unknown id.
 
-### SQLite for records, behind the interface that already exists
+*Why 404 and not 403:* a 403 confirms the id exists. Given that ids are the addressing scheme,
+an endpoint that distinguishes "not yours" from "no such analysis" is an oracle for enumerating
+them. Answering identically costs nothing and closes it.
 
-`AnalysisStore` is already a Protocol with an in-memory implementation. This adds a second
-one. No caller changes.
+*A list endpoint:* `GET /analyses` returns the signed-in climber's own analyses, newest first.
+Accounts make this possible for the first time — before, nothing could say whose anything was —
+and it is what lets a climber find a report without having kept the link.
+
+### Abuse limits: per account, plus a gate on the queue
+
+Upload rate limiting is keyed on the account. Registration is keyed on client address and can
+be closed entirely behind an invite code (`ACED_SIGNUP_CODE`). Independently of either, the
+service refuses an upload when pending-plus-running analyses are at the configured maximum —
+before storing anything.
+
+*Why per account:* a per-address limit is crude behind a gym's wifi, where one address is
+everybody. An account is the right unit, and accounts are what this change adds.
+
+*Why the invite code:* open registration on a compute-expensive service means the abuse
+vector moves from "upload a video" to "create an account, then upload a video". A code is the
+smallest thing that closes that door, and leaving it unset opens it again for a deployment
+that wants to be public.
+
+*Why the queue gate is separate and in the application:* the limit that protects the machine
+is not requests per second, it is analyses in flight — one upload occupies a worker for
+minutes. Only the application knows the queue depth, and refusing before storage is what
+keeps a rejected upload from leaving a file behind.
+
+### SQLite, behind the interfaces that already exist
+
+`AnalysisStore` is already a Protocol with an in-memory implementation; this adds a SQLite one
+and two more stores beside it, for accounts and sessions, in the same file. No caller of the
+analysis store changes.
 
 *Why SQLite:* one file, no service to run, and it matches a deployment that is one container
 on one machine. Postgres would be the answer for multiple workers; that is the change this one
@@ -79,6 +122,10 @@ deliberately does not make.
 worker that owned it died with the previous process, and nothing will resume it. Media with no
 record is deleted. Both are the same principle the worker already follows: nothing is left in
 a non-terminal state forever.
+
+*Account deletion:* removes the account, its sessions, every analysis it owns, and all their
+media, in that order of visibility — the record set that names media goes last, so a crash
+mid-way leaves media that the next startup's reconciliation will find and remove.
 
 ### The image shrinks by swapping two packages, gated on parity
 
@@ -101,41 +148,40 @@ That gap is real and goes in the README rather than being glossed.
 ### Caddy in front, for TLS
 
 A reverse proxy container that obtains and renews certificates automatically and forwards to
-the API.
+the API. `Secure` cookies require it — a session cookie that the browser will only send over
+HTTPS is only useful if there is HTTPS.
 
 *Why Caddy:* automatic certificate management with three lines of configuration. nginx with
 certbot is the same outcome with a renewal cron job to forget about.
 
-### Rate limiting in the application, not the proxy
-
-Upload rate limiting lives in the API, keyed on client address, with the queue depth as a
-second gate.
-
-*Why not the proxy:* the limit that matters is not requests per second, it is *analyses in
-flight* — a single upload can occupy a worker for minutes. Only the application knows that.
-
 ## Risks / Trade-offs
 
-- **A lost token is a lost analysis.** There is no recovery path by design: recovery would
-  require knowing who owns what, which is the user model this change avoids. The web app
-  storing the token locally and surfacing the full link is the mitigation, and it is partial.
+- **A forgotten password needs an operator.** No email means no self-service reset. Stated on
+  the sign-in screen, and the deployment note says how an operator does it.
+- **Unverified email addresses.** Anyone can register as anyone. Nothing is sent to the
+  address and nothing depends on it being real, so the consequence is only that it cannot be
+  trusted as contact information — which it is not used as.
 - **The parity evidence for the dependency swap is incomplete** while the archive is missing.
   Recorded, not hidden.
-- **Rate limiting by client address is crude** behind a proxy or NAT — a gym's wifi is one
-  address. The limit is therefore set to something a real user will not hit rather than
-  something tight, and the queue-depth gate is what actually protects the machine.
 - **SQLite serializes writes.** With a handful of concurrent analyses this is irrelevant; it
   would not be with fifty, and that is the point at which the store changes again.
+- **A registration wall is friction.** A climber who wanted a one-off report now creates an
+  account first. That is the trade for their video being theirs alone, and the sign-up form is
+  two fields.
 - **Deploying at all creates an obligation** that running locally does not: video of
-  identifiable people, on a machine, under someone's control. The consent step and the privacy
-  notice are part of this change for that reason, not as decoration.
+  identifiable people, on a machine, under someone's control. The consent step, the privacy
+  notice and account deletion are part of this change for that reason, not as decoration.
 
 ## Migration Plan
 
-1. Ownership, persistence and limits, with tests — the service still runs locally throughout.
-2. The dependency swap, **gated**: parity run and recorded before it is kept.
-3. TLS, the production compose file, and the deployment note.
-4. Consent and the privacy notice in the web app.
+1. Persistence first — accounts need it — with the analysis suite passing unchanged against
+   SQLite.
+2. Accounts, sessions and ownership, with tests. The service still runs locally throughout;
+   `docker compose up api` gets a sign-in screen.
+3. Limits and the invite code.
+4. The dependency swap, **gated**: parity run and recorded before it is kept.
+5. TLS, the production compose file, and the deployment note.
+6. Consent, the privacy notice, and account deletion in the web app.
 
-Steps 1 and 4 are independent of 2 and 3; if the dependency swap fails parity, everything else
-still ships and the image stays 7.6 GB.
+Step 4 is independent of everything else; if the swap fails parity, the rest still ships and
+the image stays 7.6 GB.

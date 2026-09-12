@@ -27,14 +27,19 @@ service handling video of identifiable people is not optional.
 
 ## What Changes
 
-- **Ownership.** An upload returns an owner token alongside the analysis id. Reading the
-  status, the report, the media, or deleting the analysis requires it. An unowned request is
-  answered as if the analysis does not exist, so a probe cannot confirm an id.
-- **Abuse limits.** Uploads are rate-limited per client, and the service refuses new work when
-  its queue is saturated rather than accepting an upload it will not get to for an hour.
-- **Persistence.** Analysis records survive a restart, and startup reconciles what it finds:
-  an analysis interrupted mid-run becomes failed rather than staying `running` forever, and
-  media no record names is deleted.
+- **Accounts.** A climber registers with an email address and a password, signs in, and gets
+  a session. Analyses belong to the account that uploaded them; nobody else can see them.
+  Sign-in is a cookie, so the browser sends it on every request including the ones a
+  `<video>` element makes on its own.
+- **Ownership.** Every analysis endpoint requires a signed-in user who owns the analysis. A
+  request from anyone else is answered as if the analysis does not exist. A signed-in climber
+  can list their own analyses.
+- **Abuse limits.** Uploads are rate-limited per account, registration is rate-limited per
+  client and can be closed behind an invite code, and the service refuses new work when its
+  queue is saturated rather than accepting an upload it will not get to for an hour.
+- **Persistence.** Accounts, sessions and analyses live in SQLite and survive a restart.
+  Startup reconciles what it finds: an analysis interrupted mid-run becomes failed rather than
+  staying `running` forever, and media no record names is deleted.
 - **A smaller image.** `tensorflow-cpu` and `opencv-python-headless` in place of the full
   packages. This is a dependency change against a pinned set, so it is gated on the parity
   suite: if the numbers move, it does not ship.
@@ -42,17 +47,20 @@ service handling video of identifiable people is not optional.
   repository.
 - **A consent step and a privacy notice.** A climber uploading footage of identifiable people
   is told what is stored, for how long, and how to delete it, before they upload rather than
-  after.
+  after — and can delete their account and everything under it.
 
 ## Impact
 
-- Affected specs: `video-analysis-api` (ownership, limits, persistence), `analysis-web-app`
-  (token handling, consent, privacy notice), and a new `service-operations` capability for
-  deployment, configuration and reconciliation.
-- Affected code: `api/` throughout, `web/src/api/` and the upload and report views,
-  `pyproject.toml`, `Dockerfile`, `docker-compose.yml`.
-- **Not in scope:** user accounts. A token per analysis is what the current resource model
-  supports, and accounts would mean a user model, a login flow, password handling and email —
-  a larger project that this one does not need in order to be safely reachable.
+- Affected specs: `video-analysis-api` (accounts, ownership, limits, persistence),
+  `analysis-web-app` (sign-in, my analyses, consent, account deletion), and a new
+  `service-operations` capability for deployment, configuration and reconciliation.
+- Affected code: `api/` throughout, `web/src/api/` and every view, `pyproject.toml`
+  (a password-hashing dependency), `Dockerfile`, `docker-compose.yml`.
+- **Not in scope:** email. No verification on sign-up, no password reset by email, no
+  notifications. A forgotten password has no self-service recovery in this version; the
+  design says what that means and what the operator can do.
+- **Not in scope:** sharing a report with someone who is not its owner. A coach reads it over
+  the climber's shoulder or from their phone. A read-only share link is a natural follow-up
+  once accounts exist, and it is the size of one small change.
 - **Not in scope:** horizontal scaling. The queue stays in-process; a second machine is a
   different change, and nothing here forecloses it.
